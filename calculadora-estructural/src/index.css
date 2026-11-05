@@ -1,0 +1,110 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 42 34% 96%;
+  --foreground: 205 28% 17%;
+  --border: 39 21% 85%;
+  --input: 39 21% 85%;
+  --card: 42 34% 98%;
+  --card-foreground: 205 28% 17%;
+  --popover: 42 34% 98%;
+  --popover-foreground: 205 28% 17%;
+  --primary: 169 39% 29%;
+  --primary-foreground: 42 34% 98%;
+  --secondary: 38 24% 91%;
+  --secondary-foreground: 205 28% 22%;
+  --muted: 39 22% 91%;
+  --muted-foreground: 203 12% 48%;
+  --accent: 17 62% 56%;
+  --accent-foreground: 42 34% 98%;
+  --destructive: 2 62% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 169 39% 29%;
+  --radius: 0.65rem;
+  --app-font-sans: 'DM Sans', sans-serif;
+  --app-font-mono: 'DM Mono', monospace;
+  --ink: #20343b;
+  --teal: #2d6a61;
+  --coral: #cd7456;
+  --paper: #f7f5ee;
+  --line: #dfddd2;
+}
+
+.dark {
+  --background: 204 27% 12%;
+  --foreground: 42 30% 92%;
+  --border: 204 17% 26%;
+  --input: 204 17% 26%;
+  --card: 204 24% 15%;
+  --card-foreground: 42 30% 92%;
+  --popover: 204 24% 15%;
+  --popover-foreground: 42 30% 92%;
+  --primary: 169 39% 48%;
+  --primary-foreground: 204 27% 12%;
+  --secondary: 204 19% 22%;
+  --secondary-foreground: 42 30% 92%;
+  --muted: 204 19% 22%;
+  --muted-foreground: 203 12% 66%;
+  --accent: 17 62% 61%;
+  --accent-foreground: 204 27% 12%;
+  --destructive: 2 62% 56%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 169 39% 48%;
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--app-font-sans);
+    margin: 0;
+  }
+  button, input, select { font: inherit; }
+}
+
+.mono { font-family: var(--app-font-mono); font-variant-numeric: tabular-nums; }
+.app-shell { min-height: 100dvh; background: var(--paper); }
+.topbar { border-bottom: 1px solid var(--line); }
+.panel { background: #fcfbf7; border: 1px solid var(--line); border-radius: 10px; }
+.field-label { display:block; font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:#68777a; font-weight:700; margin-bottom:7px; }
+.field-input { width:100%; min-width:0; border:1px solid #d8d8ce; border-radius:6px; background:#fffefa; color:#20343b; padding:9px 10px; outline:none; transition:border-color .16s, box-shadow .16s; }
+.field-input:focus { border-color:#2d6a61; box-shadow:0 0 0 3px rgba(45,106,97,.12); }
+.field-input:disabled { opacity:.55; }
+.section-kicker { font-family:var(--app-font-mono); text-transform:uppercase; letter-spacing:.13em; color:#77827f; font-size:10px; }
+.quiet-grid { background-image:linear-gradient(rgba(76,108,103,.06) 1px, transparent 1px),linear-gradient(90deg,rgba(76,108,103,.06) 1px,transparent 1px); background-size:24px 24px; }
+.appear { animation: arrive .42s ease-out both; }
+@keyframes arrive { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; } }
