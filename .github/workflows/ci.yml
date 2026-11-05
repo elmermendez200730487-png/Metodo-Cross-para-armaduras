@@ -1,0 +1,46 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9 # Versión compatible con tu pnpm-lock.yaml
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22 # Versión actual recomendada
+          cache: 'pnpm'
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13' # Especificado en tu configuración
+          cache: 'pip'
+
+      - name: Instalar dependencias de Node.js (Workspace)
+        run: pnpm install
+
+      - name: Ejecutar validación de tipos y construcción (Node.js)
+        run: |
+          pnpm run typecheck
+          pnpm run build
+
+      - name: Instalar dependencias de Python
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar script principal de Python
+        run: python main.py
