@@ -18,25 +18,61 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
     
     # DIAGRAMA DE REFERENCIA AL INICIO
     st.markdown("### Esquema de Referencia de Variables")
-    fig_ref, ax_ref = plt.subplots(figsize=(6, 5))
+    fig_ref, ax_ref = plt.subplots(figsize=(8, 6))
+    
+    # Dibujar Columnas
     ax_ref.plot([0, 0], [0, 9], 'k-', lw=2) # Columna izq
-    ax_ref.plot([5, 5], [0, 9], 'k-', lw=2) # Columna der
-    ax_ref.plot([0, 5], [3, 3], 'b-', lw=2) # Viga N1
-    ax_ref.plot([0, 5], [6, 6], 'b-', lw=2) # Viga N2
-    ax_ref.plot([0, 6.5], [9, 9], 'b-', lw=2) # Viga N3 + Voladizo
+    ax_ref.plot([6, 6], [0, 9], 'k-', lw=2) # Columna der
     
-    # Etiquetas de texto para variables
-    ax_ref.text(-0.8, 1.5, 'L3 (aI)', fontsize=10)
-    ax_ref.text(-0.8, 4.5, 'L4 (bI)', fontsize=10)
-    ax_ref.text(-0.8, 7.5, 'L5 (cI)', fontsize=10)
-    ax_ref.text(2.5, 9.2, 'L1 (dI), w1', fontsize=10, color='blue')
-    ax_ref.text(5.5, 9.2, 'L2', fontsize=10, color='blue')
-    ax_ref.text(-1.5, 9, 'F1', color='red', weight='bold')
-    ax_ref.text(-1.5, 6, 'F2', color='red', weight='bold')
-    ax_ref.text(-1.5, 3, 'F3', color='red', weight='bold')
+    # Dibujar Vigas y Voladizos
+    ax_ref.plot([0, 8], [3, 3], 'b-', lw=2) # Nivel 1
+    ax_ref.plot([0, 8], [6, 6], 'b-', lw=2) # Nivel 2
+    ax_ref.plot([0, 8], [9, 9], 'b-', lw=2) # Nivel 3
     
-    ax_ref.set_xlim(-2, 8)
-    ax_ref.set_ylim(-1, 10)
+    # Representación de las cargas distribuidas w1, w2, w3 a lo largo de viga y voladizo
+    for y_val in [3, 6, 9]:
+        ax_ref.plot([0, 8], [y_val+0.3, y_val+0.3], 'r-', lw=1) # Línea superior carga
+        for x_val in np.linspace(0, 8, 17):
+            # Flechas/líneas de carga distribuida
+            ax_ref.plot([x_val, x_val], [y_val, y_val+0.3], 'r-', lw=1)
+            
+    # Etiquetas de Nodos
+    ax_ref.text(-0.4, -0.4, 'A', fontsize=11, weight='bold')
+    ax_ref.text(6.2, -0.4, 'H', fontsize=11, weight='bold')
+    ax_ref.text(-0.4, 2.7, 'B', fontsize=11, weight='bold')
+    ax_ref.text(6.2, 2.7, 'G', fontsize=11, weight='bold')
+    ax_ref.text(-0.4, 5.7, 'C', fontsize=11, weight='bold')
+    ax_ref.text(6.2, 5.7, 'F', fontsize=11, weight='bold')
+    ax_ref.text(-0.4, 8.7, 'D', fontsize=11, weight='bold')
+    ax_ref.text(6.2, 8.7, 'E', fontsize=11, weight='bold')
+    
+    # Etiquetas de Alturas e Inercias (Columnas)
+    ax_ref.text(-1.2, 1.5, 'L3 (aI)', fontsize=11)
+    ax_ref.text(-1.2, 4.5, 'L4 (bI)', fontsize=11)
+    ax_ref.text(-1.2, 7.5, 'L5 (cI)', fontsize=11)
+    
+    # Etiquetas de Vigas (Longitudes y Cargas Distribuidas)
+    ax_ref.text(2.5, 3.4, 'L1 (dI), w3', fontsize=11, color='darkred', weight='bold')
+    ax_ref.text(2.5, 6.4, 'L1 (dI), w2', fontsize=11, color='darkred', weight='bold')
+    ax_ref.text(2.5, 9.4, 'L1 (dI), w1', fontsize=11, color='darkred', weight='bold')
+    
+    # Etiquetas de Voladizos
+    ax_ref.text(6.8, 2.7, 'L2', fontsize=11, color='blue')
+    ax_ref.text(6.8, 5.7, 'L2', fontsize=11, color='blue')
+    ax_ref.text(6.8, 8.7, 'L2', fontsize=11, color='blue')
+    
+    # Fuerzas Laterales
+    ax_ref.text(-1.8, 9, 'F1 \u2192', color='red', weight='bold', fontsize=12)
+    ax_ref.text(-1.8, 6, 'F2 \u2192', color='red', weight='bold', fontsize=12)
+    ax_ref.text(-1.8, 3, 'F3 \u2192', color='red', weight='bold', fontsize=12)
+    
+    # Cargas Puntuales en Voladizos
+    ax_ref.text(8.1, 9.1, '\u2193 P1', color='red', weight='bold', fontsize=12)
+    ax_ref.text(8.1, 6.1, '\u2193 P2', color='red', weight='bold', fontsize=12)
+    ax_ref.text(8.1, 3.1, '\u2193 P3', color='red', weight='bold', fontsize=12)
+    
+    ax_ref.set_xlim(-2.5, 9.5)
+    ax_ref.set_ylim(-1, 10.5)
     ax_ref.axis('off')
     st.pyplot(fig_ref)
     
@@ -50,14 +86,18 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         L4 = st.number_input("Altura Nivel 2 (L4)", value=3.0, step=0.5)
         L5 = st.number_input("Altura Nivel 3 (L5)", value=3.0, step=0.5)
     with col2:
-        st.markdown("**Cargas (Ton y Ton/m)**")
-        w1 = st.number_input("Carga Nivel 3 (w1)", value=2.0, step=0.5)
-        w2 = st.number_input("Carga Nivel 2 (w2)", value=3.0, step=0.5)
-        w3 = st.number_input("Carga Nivel 1 (w3)", value=3.0, step=0.5)
-        F1 = st.number_input("Fuerza Lat. Nivel 3 (F1)", value=8.0, step=1.0)
-        F2 = st.number_input("Fuerza Lat. Nivel 2 (F2)", value=6.0, step=1.0)
-        F3 = st.number_input("Fuerza Lat. Nivel 1 (F3)", value=4.0, step=1.0)
-        P = st.number_input("Carga puntual voladizo (P)", value=2.0, step=0.5)
+        st.markdown("**Cargas y Fuerzas**")
+        w1 = st.number_input("Carga Dist. N3 (w1)", value=2.0, step=0.5)
+        P1 = st.number_input("Carga Voladizo N3 (P1)", value=2.0, step=0.5)
+        F1 = st.number_input("Fuerza Lat. N3 (F1)", value=8.0, step=1.0)
+        
+        w2 = st.number_input("Carga Dist. N2 (w2)", value=3.0, step=0.5)
+        P2 = st.number_input("Carga Voladizo N2 (P2)", value=2.0, step=0.5)
+        F2 = st.number_input("Fuerza Lat. N2 (F2)", value=6.0, step=1.0)
+        
+        w3 = st.number_input("Carga Dist. N1 (w3)", value=3.0, step=0.5)
+        P3 = st.number_input("Carga Voladizo N1 (P3)", value=2.0, step=0.5)
+        F3 = st.number_input("Fuerza Lat. N1 (F3)", value=4.0, step=1.0)
     with col3:
         st.markdown("**Coeficientes de Inercia (I)**")
         I_col1 = st.number_input("Inercia Col N1 (a)", value=4.0, step=1.0)
@@ -83,13 +123,37 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         st.markdown("**Paso b) Cálculo de los factores de distribución**")
         st.info("Se calculan en cada nudo dividiendo la rigidez de la barra entre la suma de rigideces concurrentes al nudo.")
         
+        # Nivel 3
         M_DE = -(w1 * L1**2) / 12
         M_ED = (w1 * L1**2) / 12
-        M_voladizo = -(w1 * L2**2)/2 - (P * L2)
-        st.markdown("**Paso c) Momentos de empotramiento perfecto (sin desplazamiento)**")
-        st.latex(rf"\bar{{M}}_{{DE}} = -\frac{{w_1 l^2}}{{12}} = -\frac{{{w1} \times {L1}^2}}{{12}} = {M_DE:.4f}")
-        st.latex(rf"\bar{{M}}_{{ED}} = \frac{{w_1 l^2}}{{12}} = {M_ED:.4f}")
-        st.latex(rf"\bar{{M}}_{{Voladizo}} = -\frac{{w_1 L_2^2}}{{2}} - P L_2 = {M_voladizo:.4f}")
+        M_vol_3 = -(w1 * L2**2)/2 - (P1 * L2)
+        
+        # Nivel 2
+        M_CF = -(w2 * L1**2) / 12
+        M_FC = (w2 * L1**2) / 12
+        M_vol_2 = -(w2 * L2**2)/2 - (P2 * L2)
+        
+        # Nivel 1
+        M_BG = -(w3 * L1**2) / 12
+        M_GB = (w3 * L1**2) / 12
+        M_vol_1 = -(w3 * L2**2)/2 - (P3 * L2)
+        
+        st.markdown("**Paso c) Momentos de empotramiento perfecto (Estado $\Delta = 0$)**")
+        
+        st.markdown("**Nivel 3 (Nodos D y E):**")
+        st.latex(rf"\bar{{M}}_{{DE}} = -\frac{{w_1 L_1^2}}{{12}} = -\frac{{{w1} \times {L1}^2}}{{12}} = {M_DE:.4f}")
+        st.latex(rf"\bar{{M}}_{{ED}} = \frac{{w_1 L_1^2}}{{12}} = {M_ED:.4f}")
+        st.latex(rf"\bar{{M}}_{{Voladizo\_N3}} = -\frac{{w_1 L_2^2}}{{2}} - P_1 L_2 = {M_vol_3:.4f}")
+        
+        st.markdown("**Nivel 2 (Nodos C y F):**")
+        st.latex(rf"\bar{{M}}_{{CF}} = -\frac{{w_2 L_1^2}}{{12}} = -\frac{{{w2} \times {L1}^2}}{{12}} = {M_CF:.4f}")
+        st.latex(rf"\bar{{M}}_{{FC}} = \frac{{w_2 L_1^2}}{{12}} = {M_FC:.4f}")
+        st.latex(rf"\bar{{M}}_{{Voladizo\_N2}} = -\frac{{w_2 L_2^2}}{{2}} - P_2 L_2 = {M_vol_2:.4f}")
+        
+        st.markdown("**Nivel 1 (Nodos B y G):**")
+        st.latex(rf"\bar{{M}}_{{BG}} = -\frac{{w_3 L_1^2}}{{12}} = -\frac{{{w3} \times {L1}^2}}{{12}} = {M_BG:.4f}")
+        st.latex(rf"\bar{{M}}_{{GB}} = \frac{{w_3 L_1^2}}{{12}} = {M_GB:.4f}")
+        st.latex(rf"\bar{{M}}_{{Voladizo\_N1}} = -\frac{{w_3 L_2^2}}{{2}} - P_3 L_2 = {M_vol_1:.4f}")
         
         st.markdown("**Paso d) Tablas de Cross y factores de corrección**")
         st.success("Iteraciones por distribución de momentos aplicadas. Para un marco de 3 niveles se resuelve un sistema de 3x3 ecuaciones para los desplazamientos laterales relativos ($X_1, X_2, X_3$).")
@@ -104,7 +168,7 @@ elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
     ax_ref2.plot([0, 4], [3, 3], 'b-', lw=3) # Viga BC
     ax_ref2.plot([4, 6], [3, 0], 'r-', lw=3) # Col CD (inclinada)
     
-    # Etiquetas (Reemplazan la leyenda problemática)
+    # Etiquetas
     ax_ref2.text(-0.5, 1.5, 'a', fontsize=12)
     ax_ref2.text(1.5, 3.2, 'b , w (carga dist.)', fontsize=12, color='blue')
     ax_ref2.text(5.2, 1.5, 'c , $\\theta$', fontsize=12, color='red')
