@@ -104,7 +104,7 @@ elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
     ax_ref2.plot([0, 4], [3, 3], 'b-', lw=3) # Viga BC
     ax_ref2.plot([4, 6], [3, 0], 'r-', lw=3) # Col CD (inclinada)
     
-    # Etiquetas
+    # Etiquetas (Reemplazan la leyenda problemática)
     ax_ref2.text(-0.5, 1.5, 'a', fontsize=12)
     ax_ref2.text(1.5, 3.2, 'b , w (carga dist.)', fontsize=12, color='blue')
     ax_ref2.text(5.2, 1.5, 'c , $\\theta$', fontsize=12, color='red')
