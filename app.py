@@ -227,7 +227,7 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         
         # PASO 3
         st.markdown("### Paso 3: Momentos de Empotramiento (Iniciales e Impuestos)")
-       st.write(r"Calculados según cargas reales para el Estado 0, y asumidos (ej. -100) para los Estados de Desplazamiento ($\Delta_1, \Delta_2, \Delta_3$).")
+        st.write(r"Calculados según cargas reales para el Estado 0, y asumidos (ej. -100) para los Estados de Desplazamiento ($\Delta_1, \Delta_2, \Delta_3$).")
 
         # PASO 4
         st.markdown("### Paso 4: Desglose de Tablas de Iteración (Hardy Cross)")
