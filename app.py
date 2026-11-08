@@ -52,23 +52,8 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
         
     ax.plot([x1, px1, px2, x2], [y1, py1, py2, y2], color=color, lw=1.2)
     
-    # Relleno semitransparente como alternativa visual
+    # Relleno semitransparente como alternativa visual al sombreado original
     ax.fill_between([x1, x2], [y1, y2], [py1, py2], color=color, alpha=0.2)
-    
-    # --- SOMBREADO COMENTADO PARA EVITAR ERRORES DE MATPLOTLIB ---
-    # num_hatches = max(5, int(L * 8))
-    # hx, hy = [], []
-    # for i in range(1, num_hatches):
-    #     t = i / num_hatches
-    #     bx, by = x1 + t*dx, y1 + t*dy
-    #     vt = v1 + t*(v2 - v1)
-    #     tx, ty = bx + vt * scale * nx, by + vt * scale * ny
-    #     hx.extend([bx, tx, np.nan])
-    #     hy.extend([by, ty, np.nan])
-    #     
-    # if hx:
-    #     ax.plot(hx, hy, color=color, lw=0.6, alpha=0.6)
-    # -------------------------------------------------------------
         
     if abs(v1) > 0.001: ax.text(px1 + 0.3*nx, py1 + 0.3*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
     if abs(v2) > 0.001: ax.text(px2 + 0.3*nx, py2 + 0.3*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
@@ -167,7 +152,7 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
     ax_ref1.text(2.5, -1, '$L_1$', ha='center'); ax_ref1.text(6, -1, '$L_2$', ha='center')
     
     ax_ref1.set_xlim(-3, 9); ax_ref1.set_ylim(-2, 11); ax_ref1.axis('off')
-    st.pyplot(fig_ref1)
+    st.pyplot(fig_ref1, clear_figure=True)
     plt.close(fig_ref1)
     
     col1, col2, col3 = st.columns(3)
@@ -323,8 +308,10 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             
         for ax in (ax_v, ax_m): 
             ax.set_xlim(-2, L1+3); ax.set_ylim(-1, L3+L4+L5+2)
+            ax.set_xticks([])  # Previene RecursionError
+            ax.set_yticks([])  # Previene RecursionError
             ax.axis('off')
-        st.pyplot(fig_res1)
+        st.pyplot(fig_res1, clear_figure=True)
         plt.close(fig_res1)
 
 
@@ -354,7 +341,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
     ax_ref2.text(7.3, 0.4, r'$\theta$', color='red', weight='bold')
     
     ax_ref2.set_xlim(-4, 10); ax_ref2.set_ylim(-1, 6.5); ax_ref2.axis('off')
-    st.pyplot(fig_ref2)
+    st.pyplot(fig_ref2, clear_figure=True)
     plt.close(fig_ref2)
     
     col1, col2 = st.columns(2)
@@ -477,12 +464,8 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         
         for ax in (ax_v, ax_m): 
             ax.set_xlim(-2, b+c+3); ax.set_ylim(-1, a+2)
+            ax.set_xticks([])  # Previene RecursionError
+            ax.set_yticks([])  # Previene RecursionError
             ax.axis('off')
-        st.pyplot(fig_res2)
+        st.pyplot(fig_res2, clear_figure=True)
         plt.close(fig_res2)
-
-
-
-
-
-                                     
