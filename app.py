@@ -7,7 +7,7 @@ import math
 st.set_page_config(page_title="Hardy Cross - Marcos", layout="wide")
 
 # ==========================================
-# FUNCIONES DE DIBUJO
+# FUNCIONES DE DIBUJO DE DIAGRAMAS
 # ==========================================
 def draw_support(ax, x, y, nx=0, ny=-1):
     if nx == 0:
@@ -147,6 +147,7 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
     
     ax_ref1.set_xlim(-3, 9); ax_ref1.set_ylim(-2, 11); ax_ref1.axis('off')
     st.pyplot(fig_ref1)
+    plt.close(fig_ref1)
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -190,7 +191,13 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         
         # PASO 2
         st.markdown("### Paso 2: Factores de Distribución (FD)")
-        st.latex(rf"FD_{{BA}}={nodos_fd['B']['A']:.4f}, \ FD_{{BC}}={nodos_fd['B']['C']:.4f}, \ FD_{{BG}}={nodos_fd['B']['G']:.4f}")
+        st.latex(r"\text{Nodos A y H (Empotramientos):} \quad FD_{AB}=0.0000, \quad FD_{HG}=0.0000")
+        st.latex(rf"\text{{Nodo B:}} \quad FD_{{BA}}={nodos_fd['B']['A']:.4f}, \quad FD_{{BC}}={nodos_fd['B']['C']:.4f}, \quad FD_{{BG}}={nodos_fd['B']['G']:.4f}")
+        st.latex(rf"\text{{Nodo C:}} \quad FD_{{CB}}={nodos_fd['C']['B']:.4f}, \quad FD_{{CD}}={nodos_fd['C']['D']:.4f}, \quad FD_{{CF}}={nodos_fd['C']['F']:.4f}")
+        st.latex(rf"\text{{Nodo D:}} \quad FD_{{DC}}={nodos_fd['D']['C']:.4f}, \quad FD_{{DE}}={nodos_fd['D']['E']:.4f}")
+        st.latex(rf"\text{{Nodo E:}} \quad FD_{{ED}}={nodos_fd['E']['D']:.4f}, \quad FD_{{EF}}={nodos_fd['E']['F']:.4f}, \quad FD_{{EVol}}=0.0000")
+        st.latex(rf"\text{{Nodo F:}} \quad FD_{{FC}}={nodos_fd['F']['C']:.4f}, \quad FD_{{FE}}={nodos_fd['F']['E']:.4f}, \quad FD_{{FG}}={nodos_fd['F']['G']:.4f}, \quad FD_{{FVol}}=0.0000")
+        st.latex(rf"\text{{Nodo G:}} \quad FD_{{GB}}={nodos_fd['G']['B']:.4f}, \quad FD_{{GF}}={nodos_fd['G']['F']:.4f}, \quad FD_{{GH}}={nodos_fd['G']['H']:.4f}, \quad FD_{{GVol}}=0.0000")
         
         barras = [('A','B'), ('B','C'), ('C','D'), ('D','E'), ('C','F'), ('B','G'), ('E','F'), ('F','G'), ('G','H')]
         orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC', 'DE', 'ED', 'EVol', 'EF', 'FE', 'FVol', 'FC', 'CF', 'FG', 'GF', 'GVol', 'GB', 'BG', 'GH', 'HG']
@@ -250,8 +257,23 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             st.dataframe(df_final.style.format("{:.4f}"))
             
             # PASO 7
-            st.markdown("### Paso 7: Diagramas de Cortante y Momento")
-            fig_res, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
+            st.markdown("### Paso 7: Reacciones Finales")
+            R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / L3
+            R_Hx = -(M_final.get('GH',0) + M_final.get('HG',0)) / L3
+            
+            col_r1, col_r2 = st.columns(2)
+            with col_r1:
+                st.markdown("**En el Apoyo A:**")
+                st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+                st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
+            with col_r2:
+                st.markdown("**En el Apoyo H:**")
+                st.latex(rf"M_H = M_{{HG}} = {M_final.get('HG',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+                st.latex(rf"R_{{Hx}} = {R_Hx:.4f} \text{{ {u_fuerza}}}")
+
+            # PASO 8
+            st.markdown("### Paso 8: Diagramas de Cortante y Momento")
+            fig_res1, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
             coords = {'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5)}
             
             max_m = max([abs(v) for v in M_final.values()]) or 1.0
@@ -281,11 +303,12 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             for ax in (ax_v, ax_m): 
                 ax.set_xlim(-2, L1+3); ax.set_ylim(-1, L3+L4+L5+2)
                 ax.axis('off')
-            st.pyplot(fig_res)
-            plt.close(fig_res)
+            st.pyplot(fig_res1)
+            plt.close(fig_res1)
             
         except Exception as e:
-            st.error(f"Error al calcular factores o renderizar diagramas: {e}")
+            st.error(f"Error interno al calcular factores o renderizar gráficos: {e}")
+
 
 # ==============================================================================
 # EJERCICIO 2
@@ -302,7 +325,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
     ax_ref2.text(0.2, 2, 'I', color='teal', weight='bold'); ax_ref2.text(2.5, 3.7, 'I', color='teal', weight='bold'); ax_ref2.text(6.7, 2.2, 'I', color='teal', weight='bold')
     
     draw_distributed_load(ax_ref2, 0, 5, 4, '$w$')
-    ax_ref2.annotate('$F$', xy=(0, 4), xytext=(-2, 4), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
+    ax_ref2.annotate('$F$', xy=(0, 4), xytext=(-2.5, 4), arrowprops=dict(facecolor='red', width=1.5, headwidth=6), color='red', va='center')
     
     ax_ref2.text(-1, 2, '$a$', va='center', color='black'); ax_ref2.text(2.5, 5.2, '$b$', ha='center', color='black'); ax_ref2.text(6.5, 5.2, '$c$', ha='center', color='black')
     ax_ref2.plot([5, 5], [4, 5.5], 'k--', lw=0.5); ax_ref2.plot([8, 8], [0, 5.5], 'k--', lw=0.5)
@@ -312,8 +335,9 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
     ax_ref2.plot(8 + 0.8*np.cos(theta_arc), 0.8*np.sin(theta_arc), 'r-', lw=1.5)
     ax_ref2.text(7.3, 0.4, r'$\theta$', color='red', weight='bold')
     
-    ax_ref2.set_xlim(-3, 10); ax_ref2.set_ylim(-1, 6); ax_ref2.axis('off')
+    ax_ref2.set_xlim(-4, 10); ax_ref2.set_ylim(-1, 6.5); ax_ref2.axis('off')
     st.pyplot(fig_ref2)
+    plt.close(fig_ref2)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -347,7 +371,10 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         st.markdown("### Paso 3: Factores de Distribución (FD)")
         FD_BA = K_AB/(K_AB+K_BC); FD_BC = K_BC/(K_AB+K_BC)
         FD_CB = K_BC/(K_BC+K_CD); FD_CD = K_CD/(K_BC+K_CD)
-        st.latex(rf"FD_{{BA}}={FD_BA:.4f}, \ FD_{{BC}}={FD_BC:.4f}, \ FD_{{CB}}={FD_CB:.4f}, \ FD_{{CD}}={FD_CD:.4f}")
+        st.latex(r"\text{Nodo A:} \quad FD_{AB}=0.0000 \quad \text{(Empotramiento)}")
+        st.latex(rf"\text{{Nodo B:}} \quad FD_{{BA}}={FD_BA:.4f}, \quad FD_{{BC}}={FD_BC:.4f}")
+        st.latex(rf"\text{{Nodo C:}} \quad FD_{{CB}}={FD_CB:.4f}, \quad FD_{{CD}}={FD_CD:.4f}")
+        st.latex(r"\text{Nodo D:} \quad FD_{DC}=0.0000 \quad \text{(Empotramiento)}")
         
         # PASO 4
         st.markdown("### Paso 4: Momentos de Empotramiento (Iniciales e Impuestos)")
@@ -388,7 +415,22 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             st.dataframe(df_final.style.format("{:.4f}"))
             
             # PASO 8
-            st.markdown("### Paso 8: Diagramas de Cortante y Momento")
+            st.markdown("### Paso 8: Reacciones Finales")
+            R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / a
+            R_Dx = -F - R_Ax # Por sumatoria de fuerzas en X
+            
+            col_r1, col_r2 = st.columns(2)
+            with col_r1:
+                st.markdown("**En el Apoyo A:**")
+                st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+                st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
+            with col_r2:
+                st.markdown("**En el Apoyo D:**")
+                st.latex(rf"M_D = M_{{DC}} = {M_final.get('DC',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+                st.latex(rf"R_{{Dx}} = {R_Dx:.4f} \text{{ {u_fuerza}}}")
+
+            # PASO 9
+            st.markdown("### Paso 9: Diagramas de Cortante y Momento")
             fig_res2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
             coords = {'A':(0,0), 'B':(0,a), 'C':(b,a), 'D':(b+c,0)}
             
@@ -399,7 +441,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['D'][0], coords['D'][1])
             for n1, n2 in [('A','B'), ('B','C'), ('C','D')]:
                 v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
-                draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.3f}", label2=f"{v2:.3f}")
+                draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.4f}", label2=f"{v2:.4f}")
             
             ax_v.set_title("Diagrama de Fuerza Cortante")
             draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['D'][0], coords['D'][1])
@@ -413,7 +455,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             scale_v = (b * 0.15) / max_v
             
             for (n1, n2), (v_izq, v_der) in V_vals.items():
-                draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.3f}", label2=f"{abs(v_der):.3f}")
+                draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
             
             for ax in (ax_v, ax_m): 
                 ax.set_xlim(-2, b+c+3); ax.set_ylim(-1, a+2)
@@ -422,25 +464,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             plt.close(fig_res2)
             
         except Exception as e:
-            st.error(f"Error al calcular factor de corrección o renderizar diagramas: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            st.error(f"Error interno al calcular factores o renderizar gráficos: {e}")
 
 
 
