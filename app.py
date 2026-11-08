@@ -432,4 +432,30 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['D'][0], coords['D'][1])
         for n1, n2 in [('A','B'), ('B','C'), ('C','D')]:
             v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
-            draw_diagram_member(
+            draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.4f}", label2=f"{v2:.4f}")
+        
+        ax_v.set_title("Diagrama de Fuerza Cortante")
+        draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['D'][0], coords['D'][1])
+        V_vals = {}
+        for n1, n2, L, load in [('A','B',a,0), ('B','C',b,w), ('C','D',L_CD,0)]:
+            v_izq = load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            v_der = -load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            V_vals[n1+n2] = (v_izq, v_der)
+        
+        max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+        scale_v = (b * 0.15) / max_v if max_v > 1e-4 else 1.0
+        
+        for (n1, n2), (v_izq, v_der) in V_vals.items():
+            draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
+        
+        ax_v.annotate(f"Rx = {R_Ax:.2f}", xy=(coords['A'][0], coords['A'][1]), xytext=(coords['A'][0]-1.5, coords['A'][1]-0.8), 
+                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
+        ax_v.annotate(f"Rx = {R_Dx:.2f}", xy=(coords['D'][0], coords['D'][1]), xytext=(coords['D'][0]+1.5, coords['D'][1]-0.8), 
+                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
+        
+        for ax in (ax_v, ax_m): 
+            ax.set_xlim(-3, b+c+4); ax.set_ylim(-1.5, a+2)
+            ax.set_xticks([]); ax.set_yticks([])
+            ax.axis('off')
+        st.pyplot(fig_res2, clear_figure=True)
+        plt.close(fig_res2)
