@@ -164,7 +164,8 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         }
         
         st.subheader("Paso 3: Momentos de Empotramiento (Estado $\Delta = 0$)")
-        st.latex(r"\bar{M}_{DE} = " + f"{FEM_0['DE']:.4f} \quad \bar{M}_{Vol\_E} = " + f"{FEM_0['EVol']:.4f}")
+        # --- AQUÍ ESTÁ LA LÍNEA CORREGIDA PARA EVITAR EL ERROR DE SINTAXIS ---
+        st.latex(rf"\bar{{M}}_{{DE}} = {FEM_0['DE']:.4f} \quad \bar{{M}}_{{Vol\_E}} = {FEM_0['EVol']:.4f}")
         
         M0 = hardy_cross_iterations(nodos_fd, barras, FEM_0, 20)
         
