@@ -12,6 +12,12 @@ import math
 
 st.set_page_config(page_title="Hardy Cross - Marcos", layout="wide")
 
+# Inicializar variables de estado para la memoria de la app
+if 'ej1_resuelto' not in st.session_state:
+    st.session_state.ej1_resuelto = False
+if 'ej2_resuelto' not in st.session_state:
+    st.session_state.ej2_resuelto = False
+
 # ==========================================
 # FUNCIONES DE DIBUJO DE DIAGRAMAS
 # ==========================================
@@ -57,7 +63,6 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
     if abs(v2) > 0.001: ax.text(px2 + 0.3*nx, py2 + 0.3*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
 
 def draw_dimension(ax, x1, y1, x2, y2, label, offset_x=0, offset_y=0):
-    """Dibuja una línea de cota con flechas en los extremos y texto centrado."""
     px1, py1 = x1 + offset_x, y1 + offset_y
     px2, py2 = x2 + offset_x, y2 + offset_y
     
@@ -135,10 +140,9 @@ u_ang = st.sidebar.selectbox("Unidad de Ángulo", ["Grados", "Radianes"])
 
 ejercicio = st.sidebar.radio("Selecciona el marco:", ("Ejercicio 1: 3 Niveles", "Ejercicio 2: Columna Inclinada"))
 
-# ==============================================================================
-# EJERCICIO 1
-# ==============================================================================
+# Al cambiar de ejercicio, opcionalmente podrías reiniciar la vista, pero lo dejaremos simple
 if ejercicio == "Ejercicio 1: 3 Niveles":
+    st.session_state.ej2_resuelto = False  # Apagar el otro
     st.header("Marco con Tres Niveles y Una Crujía")
     
     fig_ref1, ax_ref1 = plt.subplots(figsize=(8, 7))
@@ -188,7 +192,11 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         c_coef = st.number_input("Coeficiente Inercia c", value=2.0)
         d_coef = st.number_input("Coeficiente Inercia d", value=1.0)
 
+    # AQUÍ ESTÁ LA MAGIA DEL BOTÓN Y EL SESSION_STATE
     if st.button("Resolver Ejercicio 1"):
+        st.session_state.ej1_resuelto = True
+
+    if st.session_state.ej1_resuelto:
         st.write("---")
         
         st.markdown("### Paso 1: Rigideces Angulares (K)")
@@ -216,11 +224,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         st.markdown("### Paso 2: Factores de Distribución (FD)")
         st.latex(r"\text{Nodos A y H (Empotramientos):} \quad FD_{AB}=0.0000, \quad FD_{HG}=0.0000")
         st.latex(rf"\text{{Nodo B:}} \quad FD_{{BA}}={nodos_fd['B']['A']:.4f}, \quad FD_{{BC}}={nodos_fd['B']['C']:.4f}, \quad FD_{{BG}}={nodos_fd['B']['G']:.4f}")
-        st.latex(rf"\text{{Nodo C:}} \quad FD_{{CB}}={nodos_fd['C']['B']:.4f}, \quad FD_{{CD}}={nodos_fd['C']['D']:.4f}, \quad FD_{{CF}}={nodos_fd['C']['F']:.4f}")
-        st.latex(rf"\text{{Nodo D:}} \quad FD_{{DC}}={nodos_fd['D']['C']:.4f}, \quad FD_{{DE}}={nodos_fd['D']['E']:.4f}")
-        st.latex(rf"\text{{Nodo E:}} \quad FD_{{ED}}={nodos_fd['E']['D']:.4f}, \quad FD_{{EF}}={nodos_fd['E']['F']:.4f}")
-        st.latex(rf"\text{{Nodo F:}} \quad FD_{{FC}}={nodos_fd['F']['C']:.4f}, \quad FD_{{FE}}={nodos_fd['F']['E']:.4f}, \quad FD_{{FG}}={nodos_fd['F']['G']:.4f}")
-        st.latex(rf"\text{{Nodo G:}} \quad FD_{{GB}}={nodos_fd['G']['B']:.4f}, \quad FD_{{GF}}={nodos_fd['G']['F']:.4f}, \quad FD_{{GH}}={nodos_fd['G']['H']:.4f}")
         
         barras = [('A','B'), ('B','C'), ('C','D'), ('D','E'), ('C','F'), ('B','G'), ('E','F'), ('F','G'), ('G','H')]
         orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC', 'DE', 'ED', 'EVol', 'EF', 'FE', 'FVol', 'FC', 'CF', 'FG', 'GF', 'GVol', 'GB', 'BG', 'GH', 'HG']
@@ -237,18 +240,10 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         st.markdown("### Paso 3: Momentos de Empotramiento (Iniciales e Impuestos)")
         st.write("**Estado 0 (Cargas Reales en Vigas y Voladizos):**")
         st.latex(rf"M_{{DE}} = {FEM_0['DE']:.2f}, \quad M_{{ED}} = {FEM_0['ED']:.2f}")
-        st.latex(rf"M_{{CF}} = {FEM_0['CF']:.2f}, \quad M_{{FC}} = {FEM_0['FC']:.2f}")
-        st.latex(rf"M_{{BG}} = {FEM_0['BG']:.2f}, \quad M_{{GB}} = {FEM_0['GB']:.2f}")
-        st.latex(rf"M_{{EVol}} = {FEM_0['EVol']:.2f}, \quad M_{{FVol}} = {FEM_0['FVol']:.2f}, \quad M_{{GVol}} = {FEM_0['GVol']:.2f}")
-        
-        st.write("**Estados Impuestos (Desplazamientos Laterales \u03941, \u03942, \u03943):**")
-        st.latex(rf"\Delta_1 (\text{{Nivel 1}}): M_{{AB}} = M_{{BA}} = M_{{GH}} = M_{{HG}} = {FEM_1['AB']:.2f}")
-        st.latex(rf"\Delta_2 (\text{{Nivel 2}}): M_{{BC}} = M_{{CB}} = M_{{FG}} = M_{{GF}} = {FEM_2['BC']:.2f}")
-        st.latex(rf"\Delta_3 (\text{{Nivel 3}}): M_{{CD}} = M_{{DC}} = M_{{EF}} = M_{{FE}} = {FEM_3['CD']:.2f}")
         
         st.markdown("### Paso 4: Desglose de Tablas de Iteración (Hardy Cross)")
         df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 10, orden_miembros, "M. INICIAL")
-        with st.expander("Ver Tabla Estado 0 (Cargas Reales)", expanded=True):
+        with st.expander("Ver Tabla Estado 0 (Cargas Reales)", expanded=False):
             st.dataframe(df_estado0.round(3))
         
         df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 10, orden_miembros, "M. IMPUESTO (\u03941)")
@@ -275,7 +270,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         Vector_F = np.array([F1 + F2 + F3, F1 + F2, F1]) - V0
         
         X = np.linalg.solve(Matriz_V, Vector_F)
-        st.latex(rf"X_1 = {X[0]:.4f}, \quad X_2 = {X[1]:.4f}, \quad X_3 = {X[2]:.4f}")
         M_final = {k: M0[k] + X[0]*M1[k] + X[1]*M2[k] + X[2]*M3[k] for k in orden_miembros}
         
         st.markdown("### Paso 6: Momentos Finales")
@@ -290,26 +284,20 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         col_r1, col_r2 = st.columns(2)
         with col_r1:
             st.markdown("**En el Apoyo A:**")
-            st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
             st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
         with col_r2:
             st.markdown("**En el Apoyo H:**")
-            st.latex(rf"M_H = M_{{HG}} = {M_final.get('HG',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
             st.latex(rf"R_{{Hx}} = {R_Hx:.4f} \text{{ {u_fuerza}}}")
 
         st.markdown("### Paso 8: Diagramas de Cortante y Momento")
-        
-        # --- NUEVOS CONTROLES DE ZOOM ---
         st.markdown("**🔍 Controles de Zoom para los Diagramas:**")
         col_zx, col_zy = st.columns(2)
         with col_zx:
             zoom_x1 = st.slider("Límites Eje X (Ancho)", -4.0, float(L1+L2+3.0), (-4.0, float(L1+L2+3.0)), step=0.5, key="zx1")
         with col_zy:
             zoom_y1 = st.slider("Límites Eje Y (Alto)", -1.5, float(L3+L4+L5+2.0), (-1.5, float(L3+L4+L5+2.0)), step=0.5, key="zy1")
-        # --------------------------------
             
         fig_res1, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
-        
         coords = {
             'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 
             'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5),
@@ -357,13 +345,7 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         for n_start, n_end, v_izq, v_der in vol_shear_info:
             draw_diagram_member(ax_v, coords[n_start][0], coords[n_start][1], coords[n_end][0], coords[n_end][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{v_der:.2f}")
             
-        ax_v.annotate(f"Rx = {R_Ax:.2f}", xy=(coords['A'][0], coords['A'][1]), xytext=(coords['A'][0]-2.0, coords['A'][1]-0.8), 
-                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
-        ax_v.annotate(f"Rx = {R_Hx:.2f}", xy=(coords['H'][0], coords['H'][1]), xytext=(coords['H'][0]+2.0, coords['H'][1]-0.8), 
-                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
-            
         for ax in (ax_v, ax_m): 
-            # APLICAMOS LOS LÍMITES DEL ZOOM AQUÍ
             ax.set_xlim(zoom_x1[0], zoom_x1[1]); ax.set_ylim(zoom_y1[0], zoom_y1[1])
             ax.set_xticks([]); ax.set_yticks([])
             ax.axis('off')
@@ -375,6 +357,7 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
 # EJERCICIO 2
 # ==============================================================================
 elif ejercicio == "Ejercicio 2: Columna Inclinada":
+    st.session_state.ej1_resuelto = False  # Apagar el otro
     st.header("Marco con una Columna Inclinada")
     
     fig_ref2, ax_ref2 = plt.subplots(figsize=(8, 6))
@@ -383,7 +366,6 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
     
     ax_ref2.text(-0.3, 0, 'A', weight='bold'); ax_ref2.text(-0.3, 4, 'B', weight='bold')
     ax_ref2.text(5.2, 4, 'C', weight='bold'); ax_ref2.text(8.3, 0, 'D', weight='bold')
-    ax_ref2.text(0.2, 2, 'I', color='teal', weight='bold'); ax_ref2.text(2.5, 3.7, 'I', color='teal', weight='bold'); ax_ref2.text(6.7, 2.2, 'I', color='teal', weight='bold')
     
     draw_distributed_load(ax_ref2, 0, 5, 4, '$w$')
     ax_ref2.annotate('$F$', xy=(0, 4), xytext=(-2.5, 4), arrowprops=dict(facecolor='red', width=1.5, headwidth=6), color='red', va='center')
@@ -391,11 +373,6 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
     draw_dimension(ax_ref2, 0, 0, 0, 4, '$a$', offset_x=-1.5)
     draw_dimension(ax_ref2, 0, 4, 5, 4, '$b$', offset_y=1.5)
     draw_dimension(ax_ref2, 5, 4, 8, 4, '$c$', offset_y=1.5)
-    
-    ax_ref2.plot([7, 9], [0, 0], 'k-', lw=1)
-    theta_arc = np.linspace(np.pi - np.arctan(4/3), np.pi, 20)
-    ax_ref2.plot(8 + 0.8*np.cos(theta_arc), 0.8*np.sin(theta_arc), 'r-', lw=1.5)
-    ax_ref2.text(7.3, 0.4, r'$\theta$', color='red', weight='bold')
     
     ax_ref2.set_xlim(-4, 10); ax_ref2.set_ylim(-1.5, 7.5); ax_ref2.axis('off')
     st.pyplot(fig_ref2, clear_figure=True)
@@ -412,55 +389,40 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         w = st.number_input("Carga distribuida w (Ton/m)", value=2.0)
         F = st.number_input("Fuerza F (Ton)", value=3.0)
 
+    # AQUÍ ESTÁ LA MAGIA DEL BOTÓN Y EL SESSION_STATE PARA EL EJERCICIO 2
     if st.button("Resolver Ejercicio 2"):
+        st.session_state.ej2_resuelto = True
+
+    if st.session_state.ej2_resuelto:
         st.write("---")
         
-        st.markdown("### Paso 1: Cálculo de Longitud CD (Marco Inclinado)")
-        if u_ang == "Grados":
-            L_CD = c / np.cos(np.radians(angulo))
-            st.latex(rf"L_{{CD}} = \frac{{c}}{{\cos(\theta)}} = \frac{{{c}}}{{\cos({angulo}^\circ)}} = {L_CD:.4f}")
-        else:
-            L_CD = c / np.cos(angulo)
-            st.latex(rf"L_{{CD}} = \frac{{c}}{{\cos(\theta)}} = \frac{{{c}}}{{\cos({angulo} \text{{ rad}})}} = {L_CD:.4f}")
+        st.markdown("### Paso 1: Cálculo de Longitud CD")
+        L_CD = c / np.cos(np.radians(angulo) if u_ang == "Grados" else angulo)
             
         st.markdown("### Paso 2: Rigideces Angulares (K)")
         K_AB = 1.0 / a; K_BC = 1.0 / b; K_CD = 1.0 / L_CD
-        st.latex(rf"K_{{AB}} = {K_AB:.4f}, \quad K_{{BC}} = {K_BC:.4f}, \quad K_{{CD}} = {K_CD:.4f}")
         
         st.markdown("### Paso 3: Factores de Distribución (FD)")
         FD_BA = K_AB/(K_AB+K_BC); FD_BC = K_BC/(K_AB+K_BC)
         FD_CB = K_BC/(K_BC+K_CD); FD_CD = K_CD/(K_BC+K_CD)
-        st.latex(r"\text{Nodo A:} \quad FD_{AB}=0.0000 \quad \text{(Empotramiento)}")
-        st.latex(rf"\text{{Nodo B:}} \quad FD_{{BA}}={FD_BA:.4f}, \quad FD_{{BC}}={FD_BC:.4f}")
-        st.latex(rf"\text{{Nodo C:}} \quad FD_{{CB}}={FD_CB:.4f}, \quad FD_{{CD}}={FD_CD:.4f}")
-        st.latex(r"\text{Nodo D:} \quad FD_{DC}=0.0000 \quad \text{(Empotramiento)}")
         
         st.markdown("### Paso 4: Momentos de Empotramiento (Iniciales e Impuestos)")
         FEM_0 = {'BC': -(w * b**2)/12, 'CB': (w * b**2)/12}
         M_AB_imp = -100.0
         M_CD_imp = (a**2 * M_AB_imp) / (L_CD**2)
         FEM_1 = {'AB': M_AB_imp, 'BA': M_AB_imp, 'CD': M_CD_imp, 'DC': M_CD_imp}
-        st.write(f"Estado 0 (Real): $M_{{BC}} = {FEM_0['BC']:.2f}, M_{{CB}} = {FEM_0['CB']:.2f}$")
-        st.write(rf"Estado 1 (Impuesto): $M_{{AB}} = M_{{BA}} = {FEM_1['AB']:.2f}, \quad M_{{CD}} = M_{{DC}} = {FEM_1['CD']:.2f}$")
         
         st.markdown("### Paso 5: Desglose de Tablas de Iteración (Hardy Cross)")
         nodos_fd = {'A': {'B': 0.0}, 'D': {'C': 0.0}, 'B': {'A': FD_BA, 'C': FD_BC}, 'C': {'B': FD_CB, 'D': FD_CD}}
         barras = [('A','B'), ('B','C'), ('C','D')]; orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC']
         
         df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 6, orden_miembros, "M. INICIAL")
-        st.markdown("**Tabla Estado 0 (Cargas Reales)**")
-        st.dataframe(df_estado0.round(3))
-        
         df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 6, orden_miembros, "M. IMPUESTO")
-        st.markdown("**Tabla Estado 1 (Desplazamiento Lateral)**")
-        st.dataframe(df_estado1.round(3))
         
         st.markdown("### Paso 6: Factor de Corrección por Desplazamiento")
         V0 = -(M0.get('AB',0) + M0.get('BA',0))/a - (M0.get('CD',0) + M0.get('DC',0))/a
         V1 = -(M1.get('AB',0) + M1.get('BA',0))/a - (M1.get('CD',0) + M1.get('DC',0))/a
-        
         X = (F - V0) / V1
-        st.latex(rf"X = \frac{{F - V_0}}{{V_1}} = {X:.4f}")
         
         st.markdown("### Paso 7: Momentos Finales")
         M_final = {k: M0[k] + X*M1[k] for k in orden_miembros}
@@ -474,24 +436,17 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         
         col_r1, col_r2 = st.columns(2)
         with col_r1:
-            st.markdown("**En el Apoyo A:**")
-            st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
             st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
         with col_r2:
-            st.markdown("**En el Apoyo D:**")
-            st.latex(rf"M_D = M_{{DC}} = {M_final.get('DC',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
             st.latex(rf"R_{{Dx}} = {R_Dx:.4f} \text{{ {u_fuerza}}}")
 
         st.markdown("### Paso 9: Diagramas de Cortante y Momento")
-        
-        # --- NUEVOS CONTROLES DE ZOOM ---
         st.markdown("**🔍 Controles de Zoom para los Diagramas:**")
         col_zx2, col_zy2 = st.columns(2)
         with col_zx2:
             zoom_x2 = st.slider("Límites Eje X (Ancho)", -3.0, float(b+c+4.0), (-3.0, float(b+c+4.0)), step=0.5, key="zx2")
         with col_zy2:
             zoom_y2 = st.slider("Límites Eje Y (Alto)", -1.5, float(a+2.0), (-1.5, float(a+2.0)), step=0.5, key="zy2")
-        # --------------------------------
         
         fig_res2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
         coords = {'A':(0,0), 'B':(0,a), 'C':(b,a), 'D':(b+c,0)}
@@ -519,13 +474,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         for (n1, n2), (v_izq, v_der) in V_vals.items():
             draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
         
-        ax_v.annotate(f"Rx = {R_Ax:.2f}", xy=(coords['A'][0], coords['A'][1]), xytext=(coords['A'][0]-1.5, coords['A'][1]-0.8), 
-                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
-        ax_v.annotate(f"Rx = {R_Dx:.2f}", xy=(coords['D'][0], coords['D'][1]), xytext=(coords['D'][0]+1.5, coords['D'][1]-0.8), 
-                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
-        
         for ax in (ax_v, ax_m): 
-            # APLICAMOS LOS LÍMITES DEL ZOOM AQUÍ
             ax.set_xlim(zoom_x2[0], zoom_x2[1]); ax.set_ylim(zoom_y2[0], zoom_y2[1])
             ax.set_xticks([]); ax.set_yticks([])
             ax.axis('off')
