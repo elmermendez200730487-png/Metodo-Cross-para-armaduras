@@ -181,12 +181,10 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         st.latex(r"\bar{M}_{DE} = " + f"{FEM_0['DE']:.4f}")
         st.latex(r"\bar{M}_{Vol\_E} = " + f"{FEM_0['EVol']:.4f}")
         
-        # Ejecutar Cross Estado 0
         M0 = hardy_cross_iterations(nodos_fd, barras, FEM_0, 20)
-        st.success("Iteraciones sin desplazamiento ejecutadas con éxito.")
         
         st.subheader("Paso 2: Estados de Desplazamiento ($\Delta_1, \Delta_2, \Delta_3$)")
-        st.markdown("Se asumen momentos impuestos arbitrarios en las columnas de cada nivel para generar los estados.")
+        st.markdown("Se asumen momentos impuestos arbitrarios en las columnas de cada nivel.")
         
         FEM_1 = {'AB': -100, 'BA': -100, 'GH': -100, 'HG': -100}
         M1 = hardy_cross_iterations(nodos_fd, barras, FEM_1, 20)
@@ -196,8 +194,43 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         
         FEM_3 = {'CD': -100, 'DC': -100, 'EF': -100, 'FE': -100}
         M3 = hardy_cross_iterations(nodos_fd, barras, FEM_3, 20)
+        
+        st.subheader("Resultados Distribución de Momentos (Extremos de Barra)")
+        df_M = pd.DataFrame([M0, M1, M2, M3], index=['Estado 0', 'Estado 1 (\u03941)', 'Estado 2 (\u03942)', 'Estado 3 (\u03943)']).T
+        st.dataframe(df_M.style.format("{:.4f}"))
 
-        st.success("Algoritmo de estados unitarios completado correctamente.")
+        st.subheader("Paso 3: Fuerzas Cortantes y Factores de Corrección")
+        
+        def calc_cortantes(M_dict):
+            V1 = -(M_dict.get('AB',0) + M_dict.get('BA',0) + M_dict.get('GH',0) + M_dict.get('HG',0)) / L3
+            V2 = -(M_dict.get('BC',0) + M_dict.get('CB',0) + M_dict.get('FG',0) + M_dict.get('GF',0)) / L4
+            V3 = -(M_dict.get('CD',0) + M_dict.get('DC',0) + M_dict.get('EF',0) + M_dict.get('FE',0)) / L5
+            return np.array([V1, V2, V3])
+
+        V0 = calc_cortantes(M0)
+        V1 = calc_cortantes(M1)
+        V2 = calc_cortantes(M2)
+        V3 = calc_cortantes(M3)
+        
+        H_ext = np.array([F1 + F2 + F3, F1 + F2, F1])
+        Matriz_V = np.column_stack((V1, V2, V3))
+        Vector_F = H_ext - V0
+        
+        st.latex(r"\begin{bmatrix} V1_{\Delta 1} & V1_{\Delta 2} & V1_{\Delta 3} \\ V2_{\Delta 1} & V2_{\Delta 2} & V2_{\Delta 3} \\ V3_{\Delta 1} & V3_{\Delta 2} & V3_{\Delta 3} \end{bmatrix} \begin{bmatrix} X_1 \\ X_2 \\ X_3 \end{bmatrix} = \begin{bmatrix} H_1 - V1_0 \\ H_2 - V2_0 \\ H_3 - V3_0 \end{bmatrix}")
+        
+        try:
+            X = np.linalg.solve(Matriz_V, Vector_F)
+            st.info(f"**Factores de corrección:**  \n$X_1 = {X[0]:.4f}$  \n$X_2 = {X[1]:.4f}$  \n$X_3 = {X[2]:.4f}$")
+            
+            st.subheader("Paso 4: Momentos Finales de Diseño")
+            M_final = {k: M0[k] + X[0]*M1[k] + X[1]*M2[k] + X[2]*M3[k] for k in M0.keys()}
+            
+            df_final = pd.DataFrame([M_final], index=['M Final']).T
+            st.dataframe(df_final.style.format("{:.4f}"))
+            
+        except np.linalg.LinAlgError:
+            st.error("El sistema matricial es singular. Revisa las magnitudes de cargas e inercias.")
+
 
 elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
     st.header("Marco con una Columna Inclinada")
@@ -244,7 +277,6 @@ elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
         st.subheader("Paso 1: Momentos de Empotramiento (Estado $\Delta = 0$)")
         FEM_0 = {'BC': -(w_dist * viga_L**2)/12, 'CB': (w_dist * viga_L**2)/12}
         
-        # Corrección de llaves de nodos a letras simples
         nodos_fd = {
             'B': {'A': K_AB/(K_AB+K_BC), 'C': K_BC/(K_AB+K_BC)},
             'C': {'B': K_BC/(K_BC+K_CD), 'D': K_CD/(K_BC+K_CD)}
@@ -264,4 +296,21 @@ elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
         st.latex(rf"M_{{CD}} = \frac{{h^2 \cdot M_{{AB}}}}{{CD^2}} = {M_CD_imp:.4f} \text{{ Ton-m}}")
         M1 = hardy_cross_iterations(nodos_fd, barras, FEM_1, 15)
         
-        st.success("Iteraciones de Cross ejecutadas correctamente para la columna inclinada sin errores de llave.")
+        st.subheader("Resultados Distribución de Momentos")
+        df_M = pd.DataFrame([M0, M1], index=['Estado 0', 'Estado 1 (\u0394)']).T
+        st.dataframe(df_M.style.format("{:.4f}"))
+
+        st.subheader("Paso 3: Equilibrio de Cortante y Momentos Finales")
+        
+        V0 = -(M0.get('AB',0) + M0.get('BA',0))/h - (M0.get('CD',0) + M0.get('DC',0))/h
+        V1 = -(M1.get('AB',0) + M1.get('BA',0))/h - (M1.get('CD',0) + M1.get('DC',0))/h
+        
+        if V1 != 0:
+            X = (P - V0) / V1
+            st.latex(rf"V_0 + X \cdot V_1 = F \quad \Rightarrow \quad X = {X:.5f}")
+            
+            M_final = {k: M0[k] + X*M1[k] for k in M0.keys()}
+            df_final = pd.DataFrame([M_final], index=['Momento Final (Ton-m)']).T
+            st.dataframe(df_final.style.format("{:.4f}"))
+        else:
+            st.error("El cortante en el Estado 1 es cero, verifica los momentos de prueba.")
