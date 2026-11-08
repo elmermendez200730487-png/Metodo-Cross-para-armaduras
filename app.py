@@ -164,7 +164,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
     ax_ref1.annotate('$F_2$', xy=(0, 6), xytext=(-1.5, 6), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
     ax_ref1.annotate('$F_3$', xy=(0, 3), xytext=(-1.5, 3), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
     
-    # NUEVAS LÍNEAS DE COTAS PARA EJERCICIO 1
     draw_dimension(ax_ref1, 0, 0, 0, 3, '$L_3$', offset_x=-2.2)
     draw_dimension(ax_ref1, 0, 3, 0, 6, '$L_4$', offset_x=-2.2)
     draw_dimension(ax_ref1, 0, 6, 0, 9, '$L_5$', offset_x=-2.2)
@@ -299,9 +298,18 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             st.latex(rf"R_{{Hx}} = {R_Hx:.4f} \text{{ {u_fuerza}}}")
 
         st.markdown("### Paso 8: Diagramas de Cortante y Momento")
+        
+        # --- NUEVOS CONTROLES DE ZOOM ---
+        st.markdown("**🔍 Controles de Zoom para los Diagramas:**")
+        col_zx, col_zy = st.columns(2)
+        with col_zx:
+            zoom_x1 = st.slider("Límites Eje X (Ancho)", -4.0, float(L1+L2+3.0), (-4.0, float(L1+L2+3.0)), step=0.5, key="zx1")
+        with col_zy:
+            zoom_y1 = st.slider("Límites Eje Y (Alto)", -1.5, float(L3+L4+L5+2.0), (-1.5, float(L3+L4+L5+2.0)), step=0.5, key="zy1")
+        # --------------------------------
+            
         fig_res1, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
         
-        # Coordenadas actualizadas (incluyendo extremos de los voladizos)
         coords = {
             'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 
             'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5),
@@ -319,7 +327,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
             draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.2f}", label2=f"{v2:.2f}")
 
-        # Dibujar momentos en los voladizos
         for n_start, n_end, name_m in [('E', 'E_vol', 'EVol'), ('F', 'F_vol', 'FVol'), ('G', 'G_vol', 'GVol')]:
             v1 = M_final.get(name_m, 0)
             draw_diagram_member(ax_m, coords[n_start][0], coords[n_start][1], coords[n_end][0], coords[n_end][1], v1, 0, scale_m, color='purple', label1=f"{v1:.2f}", label2="0.00")
@@ -328,12 +335,11 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['H'][0], coords['H'][1])
         
         V_vals = {}
-        for n1, n2, L, w_val in [('A','B',L3,0), ('B','C',L4,0), ('C','D',L5,0), ('H','G',L3,0), ('G','F',L4,0), ('F','E',L5,0), ('B','G',L1,w3), ('C','F',L1,w2), ('D','E',L1,w1)]:
-            v_izq = w_val*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-            v_der = -w_val*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+        for n1, n2, L_val, w_val in [('A','B',L3,0), ('B','C',L4,0), ('C','D',L5,0), ('H','G',L3,0), ('G','F',L4,0), ('F','E',L5,0), ('B','G',L1,w3), ('C','F',L1,w2), ('D','E',L1,w1)]:
+            v_izq = w_val*L_val/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L_val
+            v_der = -w_val*L_val/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L_val
             V_vals[n1+n2] = (v_izq, v_der)
         
-        # Información de cortantes en voladizos (v_apoyo, v_punta)
         vol_shear_info = [
             ('E', 'E_vol', w1*L2 + P1, P1), 
             ('F', 'F_vol', w2*L2 + P2, P2), 
@@ -345,11 +351,9 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         max_v = max(max_v_tramos, max_v_vol)
         scale_v = (L1 * 0.15) / max_v if max_v > 1e-4 else 1.0
         
-        # Dibujar cortante normal
         for (n1, n2), (v_izq, v_der) in V_vals.items():
             draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
             
-        # Dibujar cortante en voladizos
         for n_start, n_end, v_izq, v_der in vol_shear_info:
             draw_diagram_member(ax_v, coords[n_start][0], coords[n_start][1], coords[n_end][0], coords[n_end][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{v_der:.2f}")
             
@@ -359,9 +363,11 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
                       arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
             
         for ax in (ax_v, ax_m): 
-            ax.set_xlim(-4, L1+L2+3); ax.set_ylim(-1.5, L3+L4+L5+2)
+            # APLICAMOS LOS LÍMITES DEL ZOOM AQUÍ
+            ax.set_xlim(zoom_x1[0], zoom_x1[1]); ax.set_ylim(zoom_y1[0], zoom_y1[1])
             ax.set_xticks([]); ax.set_yticks([])
             ax.axis('off')
+            
         st.pyplot(fig_res1, clear_figure=True)
         plt.close(fig_res1)
 
@@ -382,7 +388,6 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
     draw_distributed_load(ax_ref2, 0, 5, 4, '$w$')
     ax_ref2.annotate('$F$', xy=(0, 4), xytext=(-2.5, 4), arrowprops=dict(facecolor='red', width=1.5, headwidth=6), color='red', va='center')
     
-    # NUEVAS LÍNEAS DE COTAS PARA EJERCICIO 2
     draw_dimension(ax_ref2, 0, 0, 0, 4, '$a$', offset_x=-1.5)
     draw_dimension(ax_ref2, 0, 4, 5, 4, '$b$', offset_y=1.5)
     draw_dimension(ax_ref2, 5, 4, 8, 4, '$c$', offset_y=1.5)
@@ -478,6 +483,16 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             st.latex(rf"R_{{Dx}} = {R_Dx:.4f} \text{{ {u_fuerza}}}")
 
         st.markdown("### Paso 9: Diagramas de Cortante y Momento")
+        
+        # --- NUEVOS CONTROLES DE ZOOM ---
+        st.markdown("**🔍 Controles de Zoom para los Diagramas:**")
+        col_zx2, col_zy2 = st.columns(2)
+        with col_zx2:
+            zoom_x2 = st.slider("Límites Eje X (Ancho)", -3.0, float(b+c+4.0), (-3.0, float(b+c+4.0)), step=0.5, key="zx2")
+        with col_zy2:
+            zoom_y2 = st.slider("Límites Eje Y (Alto)", -1.5, float(a+2.0), (-1.5, float(a+2.0)), step=0.5, key="zy2")
+        # --------------------------------
+        
         fig_res2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
         coords = {'A':(0,0), 'B':(0,a), 'C':(b,a), 'D':(b+c,0)}
         
@@ -493,9 +508,9 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         ax_v.set_title("Diagrama de Fuerza Cortante")
         draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['D'][0], coords['D'][1])
         V_vals = {}
-        for n1, n2, L, load in [('A','B',a,0), ('B','C',b,w), ('C','D',L_CD,0)]:
-            v_izq = load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-            v_der = -load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+        for n1, n2, L_val, load in [('A','B',a,0), ('B','C',b,w), ('C','D',L_CD,0)]:
+            v_izq = load*L_val/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L_val
+            v_der = -load*L_val/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L_val
             V_vals[n1+n2] = (v_izq, v_der)
         
         max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
@@ -510,8 +525,10 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
                       arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
         
         for ax in (ax_v, ax_m): 
-            ax.set_xlim(-3, b+c+4); ax.set_ylim(-1.5, a+2)
+            # APLICAMOS LOS LÍMITES DEL ZOOM AQUÍ
+            ax.set_xlim(zoom_x2[0], zoom_x2[1]); ax.set_ylim(zoom_y2[0], zoom_y2[1])
             ax.set_xticks([]); ax.set_yticks([])
             ax.axis('off')
+            
         st.pyplot(fig_res2, clear_figure=True)
         plt.close(fig_res2)
