@@ -56,6 +56,24 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
     if abs(v1) > 0.001: ax.text(px1 + 0.3*nx, py1 + 0.3*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
     if abs(v2) > 0.001: ax.text(px2 + 0.3*nx, py2 + 0.3*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
 
+def draw_dimension(ax, x1, y1, x2, y2, label, offset_x=0, offset_y=0):
+    """Dibuja una línea de cota con flechas en los extremos y texto centrado."""
+    px1, py1 = x1 + offset_x, y1 + offset_y
+    px2, py2 = x2 + offset_x, y2 + offset_y
+    
+    ax.annotate('', xy=(px1, py1), xytext=(px2, py2), 
+                arrowprops=dict(arrowstyle='<|-|>', color='black', shrinkA=0, shrinkB=0, lw=1))
+    
+    ax.plot([x1, px1], [y1, py1], color='gray', lw=0.8, ls=':')
+    ax.plot([x2, px2], [y2, py2], color='gray', lw=0.8, ls=':')
+    
+    tx, ty = (px1 + px2) / 2, (py1 + py2) / 2
+    if offset_x != 0: tx += offset_x * 0.15
+    if offset_y != 0: ty += offset_y * 0.15
+    
+    ax.text(tx, ty, label, ha='center', va='center', weight='bold', color='black', 
+            fontsize=9, bbox=dict(facecolor='white', edgecolor='none', pad=2))
+
 # ==========================================
 # FUNCIÓN GENERADORA DE TABLAS CROSS
 # ==========================================
@@ -142,14 +160,18 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
     ax_ref1.annotate('$P_2$', xy=(7, 6), xytext=(7, 7), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', ha='center')
     ax_ref1.annotate('$P_3$', xy=(7, 3), xytext=(7, 4), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', ha='center')
     
-    ax_ref1.annotate('$F_1$', xy=(0, 9), xytext=(-2, 9), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
-    ax_ref1.annotate('$F_2$', xy=(0, 6), xytext=(-2, 6), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
-    ax_ref1.annotate('$F_3$', xy=(0, 3), xytext=(-2, 3), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
+    ax_ref1.annotate('$F_1$', xy=(0, 9), xytext=(-1.5, 9), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
+    ax_ref1.annotate('$F_2$', xy=(0, 6), xytext=(-1.5, 6), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
+    ax_ref1.annotate('$F_3$', xy=(0, 3), xytext=(-1.5, 3), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
     
-    ax_ref1.text(7.5, 1.5, '$L_3$', va='center'); ax_ref1.text(7.5, 4.5, '$L_4$', va='center'); ax_ref1.text(7.5, 7.5, '$L_5$', va='center')
-    ax_ref1.text(2.5, -1, '$L_1$', ha='center'); ax_ref1.text(6, -1, '$L_2$', ha='center')
+    # NUEVAS LÍNEAS DE COTAS PARA EJERCICIO 1
+    draw_dimension(ax_ref1, 0, 0, 0, 3, '$L_3$', offset_x=-2.2)
+    draw_dimension(ax_ref1, 0, 3, 0, 6, '$L_4$', offset_x=-2.2)
+    draw_dimension(ax_ref1, 0, 6, 0, 9, '$L_5$', offset_x=-2.2)
+    draw_dimension(ax_ref1, 0, 0, 5, 0, '$L_1$', offset_y=-1.5)
+    draw_dimension(ax_ref1, 5, 0, 7, 0, '$L_2$', offset_y=-1.5)
     
-    ax_ref1.set_xlim(-3, 9); ax_ref1.set_ylim(-2, 11); ax_ref1.axis('off')
+    ax_ref1.set_xlim(-4, 9); ax_ref1.set_ylim(-2.5, 11.5); ax_ref1.axis('off')
     st.pyplot(fig_ref1, clear_figure=True)
     plt.close(fig_ref1)
     
@@ -204,7 +226,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         barras = [('A','B'), ('B','C'), ('C','D'), ('D','E'), ('C','F'), ('B','G'), ('E','F'), ('F','G'), ('G','H')]
         orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC', 'DE', 'ED', 'EVol', 'EF', 'FE', 'FVol', 'FC', 'CF', 'FG', 'GF', 'GVol', 'GB', 'BG', 'GH', 'HG']
         
-        # DEFINICIÓN DE MOMENTOS PARA PASO 3
         FEM_0 = {
             'DE': -(w1*L1**2)/12, 'ED': (w1*L1**2)/12, 'CF': -(w2*L1**2)/12, 'FC': (w2*L1**2)/12,
             'BG': -(w3*L1**2)/12, 'GB': (w3*L1**2)/12, 'EVol': -(w1*L2**2)/2 - P1*L2,
@@ -279,7 +300,13 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
 
         st.markdown("### Paso 8: Diagramas de Cortante y Momento")
         fig_res1, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
-        coords = {'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5)}
+        
+        # Coordenadas actualizadas (incluyendo extremos de los voladizos)
+        coords = {
+            'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 
+            'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5),
+            'E_vol':(L1+L2, L3+L4+L5), 'F_vol':(L1+L2, L3+L4), 'G_vol':(L1+L2, L3)
+        }
         
         max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
         scale_m = (L1 * 0.15) / max_m if max_m > 1e-4 else 1.0
@@ -287,31 +314,52 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         ax_m.set_title("Diagrama de Momento Flexionante")
         draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['H'][0], coords['H'][1])
         tramos_m = [('A','B'), ('B','C'), ('C','D'), ('H','G'), ('G','F'), ('F','E'), ('B','G'), ('C','F'), ('D','E')]
+        
         for n1, n2 in tramos_m:
             v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
             draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.2f}", label2=f"{v2:.2f}")
 
+        # Dibujar momentos en los voladizos
+        for n_start, n_end, name_m in [('E', 'E_vol', 'EVol'), ('F', 'F_vol', 'FVol'), ('G', 'G_vol', 'GVol')]:
+            v1 = M_final.get(name_m, 0)
+            draw_diagram_member(ax_m, coords[n_start][0], coords[n_start][1], coords[n_end][0], coords[n_end][1], v1, 0, scale_m, color='purple', label1=f"{v1:.2f}", label2="0.00")
+
         ax_v.set_title("Diagrama de Fuerza Cortante")
         draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['H'][0], coords['H'][1])
+        
         V_vals = {}
-        for n1, n2, L, w in [('A','B',L3,0), ('B','C',L4,0), ('C','D',L5,0), ('H','G',L3,0), ('G','F',L4,0), ('F','E',L5,0), ('B','G',L1,w3), ('C','F',L1,w2), ('D','E',L1,w1)]:
-            v_izq = w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-            v_der = -w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+        for n1, n2, L, w_val in [('A','B',L3,0), ('B','C',L4,0), ('C','D',L5,0), ('H','G',L3,0), ('G','F',L4,0), ('F','E',L5,0), ('B','G',L1,w3), ('C','F',L1,w2), ('D','E',L1,w1)]:
+            v_izq = w_val*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            v_der = -w_val*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
             V_vals[n1+n2] = (v_izq, v_der)
         
-        max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+        # Información de cortantes en voladizos (v_apoyo, v_punta)
+        vol_shear_info = [
+            ('E', 'E_vol', w1*L2 + P1, P1), 
+            ('F', 'F_vol', w2*L2 + P2, P2), 
+            ('G', 'G_vol', w3*L2 + P3, P3)
+        ]
+        
+        max_v_tramos = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+        max_v_vol = max([abs(v[2]) for v in vol_shear_info] + [abs(v[3]) for v in vol_shear_info], default=0.0)
+        max_v = max(max_v_tramos, max_v_vol)
         scale_v = (L1 * 0.15) / max_v if max_v > 1e-4 else 1.0
         
+        # Dibujar cortante normal
         for (n1, n2), (v_izq, v_der) in V_vals.items():
             draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
             
-        ax_v.annotate(f"Rx = {R_Ax:.2f}", xy=(coords['A'][0], coords['A'][1]), xytext=(coords['A'][0]-1.8, coords['A'][1]-0.8), 
+        # Dibujar cortante en voladizos
+        for n_start, n_end, v_izq, v_der in vol_shear_info:
+            draw_diagram_member(ax_v, coords[n_start][0], coords[n_start][1], coords[n_end][0], coords[n_end][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{v_der:.2f}")
+            
+        ax_v.annotate(f"Rx = {R_Ax:.2f}", xy=(coords['A'][0], coords['A'][1]), xytext=(coords['A'][0]-2.0, coords['A'][1]-0.8), 
                       arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
-        ax_v.annotate(f"Rx = {R_Hx:.2f}", xy=(coords['H'][0], coords['H'][1]), xytext=(coords['H'][0]+1.8, coords['H'][1]-0.8), 
+        ax_v.annotate(f"Rx = {R_Hx:.2f}", xy=(coords['H'][0], coords['H'][1]), xytext=(coords['H'][0]+2.0, coords['H'][1]-0.8), 
                       arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
             
         for ax in (ax_v, ax_m): 
-            ax.set_xlim(-3, L1+4); ax.set_ylim(-1.5, L3+L4+L5+2)
+            ax.set_xlim(-4, L1+L2+3); ax.set_ylim(-1.5, L3+L4+L5+2)
             ax.set_xticks([]); ax.set_yticks([])
             ax.axis('off')
         st.pyplot(fig_res1, clear_figure=True)
@@ -334,15 +382,17 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
     draw_distributed_load(ax_ref2, 0, 5, 4, '$w$')
     ax_ref2.annotate('$F$', xy=(0, 4), xytext=(-2.5, 4), arrowprops=dict(facecolor='red', width=1.5, headwidth=6), color='red', va='center')
     
-    ax_ref2.text(-1, 2, '$a$', va='center', color='black'); ax_ref2.text(2.5, 5.2, '$b$', ha='center', color='black'); ax_ref2.text(6.5, 5.2, '$c$', ha='center', color='black')
-    ax_ref2.plot([5, 5], [4, 5.5], 'k--', lw=0.5); ax_ref2.plot([8, 8], [0, 5.5], 'k--', lw=0.5)
+    # NUEVAS LÍNEAS DE COTAS PARA EJERCICIO 2
+    draw_dimension(ax_ref2, 0, 0, 0, 4, '$a$', offset_x=-1.5)
+    draw_dimension(ax_ref2, 0, 4, 5, 4, '$b$', offset_y=1.5)
+    draw_dimension(ax_ref2, 5, 4, 8, 4, '$c$', offset_y=1.5)
     
     ax_ref2.plot([7, 9], [0, 0], 'k-', lw=1)
     theta_arc = np.linspace(np.pi - np.arctan(4/3), np.pi, 20)
     ax_ref2.plot(8 + 0.8*np.cos(theta_arc), 0.8*np.sin(theta_arc), 'r-', lw=1.5)
     ax_ref2.text(7.3, 0.4, r'$\theta$', color='red', weight='bold')
     
-    ax_ref2.set_xlim(-4, 10); ax_ref2.set_ylim(-1, 6.5); ax_ref2.axis('off')
+    ax_ref2.set_xlim(-4, 10); ax_ref2.set_ylim(-1.5, 7.5); ax_ref2.axis('off')
     st.pyplot(fig_ref2, clear_figure=True)
     plt.close(fig_ref2)
     
