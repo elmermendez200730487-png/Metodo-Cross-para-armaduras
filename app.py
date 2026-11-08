@@ -194,6 +194,12 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         
         st.markdown("### Paso 2: Factores de Distribución (FD)")
         st.latex(r"\text{Nodos A y H (Empotramientos):} \quad FD_{AB}=0.0000, \quad FD_{HG}=0.0000")
+        st.latex(rf"\text{{Nodo B:}} \quad FD_{{BA}}={nodos_fd['B']['A']:.4f}, \quad FD_{{BC}}={nodos_fd['B']['C']:.4f}, \quad FD_{{BG}}={nodos_fd['B']['G']:.4f}")
+        st.latex(rf"\text{{Nodo C:}} \quad FD_{{CB}}={nodos_fd['C']['B']:.4f}, \quad FD_{{CD}}={nodos_fd['C']['D']:.4f}, \quad FD_{{CF}}={nodos_fd['C']['F']:.4f}")
+        st.latex(rf"\text{{Nodo D:}} \quad FD_{{DC}}={nodos_fd['D']['C']:.4f}, \quad FD_{{DE}}={nodos_fd['D']['E']:.4f}")
+        st.latex(rf"\text{{Nodo E:}} \quad FD_{{ED}}={nodos_fd['E']['D']:.4f}, \quad FD_{{EF}}={nodos_fd['E']['F']:.4f}")
+        st.latex(rf"\text{{Nodo F:}} \quad FD_{{FC}}={nodos_fd['F']['C']:.4f}, \quad FD_{{FE}}={nodos_fd['F']['E']:.4f}, \quad FD_{{FG}}={nodos_fd['F']['G']:.4f}")
+        st.latex(rf"\text{{Nodo G:}} \quad FD_{{GB}}={nodos_fd['G']['B']:.4f}, \quad FD_{{GF}}={nodos_fd['G']['F']:.4f}, \quad FD_{{GH}}={nodos_fd['G']['H']:.4f}")
         
         barras = [('A','B'), ('B','C'), ('C','D'), ('D','E'), ('C','F'), ('B','G'), ('E','F'), ('F','G'), ('G','H')]
         orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC', 'DE', 'ED', 'EVol', 'EF', 'FE', 'FVol', 'FC', 'CF', 'FG', 'GF', 'GVol', 'GB', 'BG', 'GH', 'HG']
