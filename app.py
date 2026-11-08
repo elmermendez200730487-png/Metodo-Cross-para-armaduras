@@ -227,7 +227,7 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         
         # PASO 3
         st.markdown("### Paso 3: Momentos de Empotramiento (Iniciales e Impuestos)")
-        st.write("Calculados según cargas reales para el Estado 0, y asumidos (ej. -100) para los Estados de Desplazamiento ($\Delta_1, \Delta_2, \Delta_3$).")
+       st.write(r"Calculados según cargas reales para el Estado 0, y asumidos (ej. -100) para los Estados de Desplazamiento ($\Delta_1, \Delta_2, \Delta_3$).")
 
         # PASO 4
         st.markdown("### Paso 4: Desglose de Tablas de Iteración (Hardy Cross)")
@@ -402,7 +402,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         M_CD_imp = (a**2 * M_AB_imp) / (L_CD**2)
         FEM_1 = {'AB': M_AB_imp, 'BA': M_AB_imp, 'CD': M_CD_imp, 'DC': M_CD_imp}
         st.write(f"Estado 0 (Real): $M_{{BC}} = {FEM_0['BC']:.2f}, M_{{CB}} = {FEM_0['CB']:.2f}$")
-        st.write(f"Estado 1 (Impuesto): $M_{{AB}} = M_{{BA}} = {FEM_1['AB']:.2f}, \quad M_{{CD}} = M_{{DC}} = {FEM_1['CD']:.2f}$")
+        st.write(rf"Estado 1 (Impuesto): $M_{{AB}} = M_{{BA}} = {FEM_1['AB']:.2f}, \quad M_{{CD}} = M_{{DC}} = {FEM_1['CD']:.2f}$")
         
         # PASO 5
         st.markdown("### Paso 5: Desglose de Tablas de Iteración (Hardy Cross)")
