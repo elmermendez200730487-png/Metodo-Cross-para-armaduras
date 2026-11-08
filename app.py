@@ -52,19 +52,23 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
         
     ax.plot([x1, px1, px2, x2], [y1, py1, py2, y2], color=color, lw=1.2)
     
-    # Acumulamos las líneas de sombreado en un solo objeto gráfico para evitar error de memoria
-    num_hatches = max(5, int(L * 8))
-    hx, hy = [], []
-    for i in range(1, num_hatches):
-        t = i / num_hatches
-        bx, by = x1 + t*dx, y1 + t*dy
-        vt = v1 + t*(v2 - v1)
-        tx, ty = bx + vt * scale * nx, by + vt * scale * ny
-        hx.extend([bx, tx, np.nan])
-        hy.extend([by, ty, np.nan])
-        
-    if hx:
-        ax.plot(hx, hy, color=color, lw=0.6, alpha=0.6)
+    # Relleno semitransparente como alternativa visual
+    ax.fill_between([x1, x2], [y1, y2], [py1, py2], color=color, alpha=0.2)
+    
+    # --- SOMBREADO COMENTADO PARA EVITAR ERRORES DE MATPLOTLIB ---
+    # num_hatches = max(5, int(L * 8))
+    # hx, hy = [], []
+    # for i in range(1, num_hatches):
+    #     t = i / num_hatches
+    #     bx, by = x1 + t*dx, y1 + t*dy
+    #     vt = v1 + t*(v2 - v1)
+    #     tx, ty = bx + vt * scale * nx, by + vt * scale * ny
+    #     hx.extend([bx, tx, np.nan])
+    #     hy.extend([by, ty, np.nan])
+    #     
+    # if hx:
+    #     ax.plot(hx, hy, color=color, lw=0.6, alpha=0.6)
+    # -------------------------------------------------------------
         
     if abs(v1) > 0.001: ax.text(px1 + 0.3*nx, py1 + 0.3*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
     if abs(v2) > 0.001: ax.text(px2 + 0.3*nx, py2 + 0.3*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
@@ -262,71 +266,66 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         Matriz_V = np.column_stack((V1, V2, V3))
         Vector_F = np.array([F1 + F2 + F3, F1 + F2, F1]) - V0
         
-        try:
-            X = np.linalg.solve(Matriz_V, Vector_F)
-            st.latex(rf"X_1 = {X[0]:.4f}, \quad X_2 = {X[1]:.4f}, \quad X_3 = {X[2]:.4f}")
-            M_final = {k: M0[k] + X[0]*M1[k] + X[1]*M2[k] + X[2]*M3[k] for k in orden_miembros}
-            
-            # PASO 6
-            st.markdown("### Paso 6: Momentos Finales")
-            # Convertido a .round(4) sin uso de .style.format() para prevenir error interno de Streamlit Styler recursivo
-            df_final = pd.DataFrame([M_final], index=['Mom. Final'])
-            df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
-            st.dataframe(df_final.astype(float).round(4))
-            
-            # PASO 7
-            st.markdown("### Paso 7: Reacciones Finales")
-            R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / L3
-            R_Hx = -(M_final.get('GH',0) + M_final.get('HG',0)) / L3
-            
-            col_r1, col_r2 = st.columns(2)
-            with col_r1:
-                st.markdown("**En el Apoyo A:**")
-                st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
-                st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
-            with col_r2:
-                st.markdown("**En el Apoyo H:**")
-                st.latex(rf"M_H = M_{{HG}} = {M_final.get('HG',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
-                st.latex(rf"R_{{Hx}} = {R_Hx:.4f} \text{{ {u_fuerza}}}")
+        X = np.linalg.solve(Matriz_V, Vector_F)
+        st.latex(rf"X_1 = {X[0]:.4f}, \quad X_2 = {X[1]:.4f}, \quad X_3 = {X[2]:.4f}")
+        M_final = {k: M0[k] + X[0]*M1[k] + X[1]*M2[k] + X[2]*M3[k] for k in orden_miembros}
+        
+        # PASO 6
+        st.markdown("### Paso 6: Momentos Finales")
+        df_final = pd.DataFrame([M_final], index=['Mom. Final'])
+        df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
+        st.dataframe(df_final.astype(float).round(4))
+        
+        # PASO 7
+        st.markdown("### Paso 7: Reacciones Finales")
+        R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / L3
+        R_Hx = -(M_final.get('GH',0) + M_final.get('HG',0)) / L3
+        
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            st.markdown("**En el Apoyo A:**")
+            st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
+        with col_r2:
+            st.markdown("**En el Apoyo H:**")
+            st.latex(rf"M_H = M_{{HG}} = {M_final.get('HG',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Hx}} = {R_Hx:.4f} \text{{ {u_fuerza}}}")
 
-            # PASO 8
-            st.markdown("### Paso 8: Diagramas de Cortante y Momento")
-            fig_res1, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
-            coords = {'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5)}
-            
-            # Ajuste de escala segura 
-            max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
-            scale_m = (L1 * 0.15) / max_m if max_m > 1e-4 else 1.0
-            
-            ax_m.set_title("Diagrama de Momento Flexionante")
-            draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['H'][0], coords['H'][1])
-            tramos_m = [('A','B'), ('B','C'), ('C','D'), ('H','G'), ('G','F'), ('F','E'), ('B','G'), ('C','F'), ('D','E')]
-            for n1, n2 in tramos_m:
-                v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
-                draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.2f}", label2=f"{v2:.2f}")
+        # PASO 8
+        st.markdown("### Paso 8: Diagramas de Cortante y Momento")
+        fig_res1, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
+        coords = {'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5)}
+        
+        # Ajuste de escala segura 
+        max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
+        scale_m = (L1 * 0.15) / max_m if max_m > 1e-4 else 1.0
+        
+        ax_m.set_title("Diagrama de Momento Flexionante")
+        draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['H'][0], coords['H'][1])
+        tramos_m = [('A','B'), ('B','C'), ('C','D'), ('H','G'), ('G','F'), ('F','E'), ('B','G'), ('C','F'), ('D','E')]
+        for n1, n2 in tramos_m:
+            v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
+            draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.2f}", label2=f"{v2:.2f}")
 
-            ax_v.set_title("Diagrama de Fuerza Cortante")
-            draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['H'][0], coords['H'][1])
-            V_vals = {}
-            for n1, n2, L, w in [('A','B',L3,0), ('B','C',L4,0), ('C','D',L5,0), ('H','G',L3,0), ('G','F',L4,0), ('F','E',L5,0), ('B','G',L1,w3), ('C','F',L1,w2), ('D','E',L1,w1)]:
-                v_izq = w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-                v_der = -w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-                V_vals[n1+n2] = (v_izq, v_der)
+        ax_v.set_title("Diagrama de Fuerza Cortante")
+        draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['H'][0], coords['H'][1])
+        V_vals = {}
+        for n1, n2, L, w in [('A','B',L3,0), ('B','C',L4,0), ('C','D',L5,0), ('H','G',L3,0), ('G','F',L4,0), ('F','E',L5,0), ('B','G',L1,w3), ('C','F',L1,w2), ('D','E',L1,w1)]:
+            v_izq = w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            v_der = -w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            V_vals[n1+n2] = (v_izq, v_der)
+        
+        max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+        scale_v = (L1 * 0.15) / max_v if max_v > 1e-4 else 1.0
+        
+        for (n1, n2), (v_izq, v_der) in V_vals.items():
+            draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
             
-            max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
-            scale_v = (L1 * 0.15) / max_v if max_v > 1e-4 else 1.0
-            
-            for (n1, n2), (v_izq, v_der) in V_vals.items():
-                draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
-                
-            for ax in (ax_v, ax_m): 
-                ax.set_xlim(-2, L1+3); ax.set_ylim(-1, L3+L4+L5+2)
-                ax.axis('off')
-            st.pyplot(fig_res1)
-            plt.close(fig_res1)
-            
-        except Exception as e:
-            st.error(f"Error interno al calcular factores o renderizar gráficos: {e}")
+        for ax in (ax_v, ax_m): 
+            ax.set_xlim(-2, L1+3); ax.set_ylim(-1, L3+L4+L5+2)
+            ax.axis('off')
+        st.pyplot(fig_res1)
+        plt.close(fig_res1)
 
 
 # ==============================================================================
@@ -422,90 +421,65 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         V0 = -(M0.get('AB',0) + M0.get('BA',0))/a - (M0.get('CD',0) + M0.get('DC',0))/a
         V1 = -(M1.get('AB',0) + M1.get('BA',0))/a - (M1.get('CD',0) + M1.get('DC',0))/a
         
-        try:
-            X = (F - V0) / V1
-            st.latex(rf"X = \frac{{F - V_0}}{{V_1}} = {X:.4f}")
-            
-            # PASO 7
-            st.markdown("### Paso 7: Momentos Finales")
-            M_final = {k: M0[k] + X*M1[k] for k in orden_miembros}
-            df_final = pd.DataFrame([M_final], index=['Mom. Final'])
-            df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
-            st.dataframe(df_final.astype(float).round(4))
-            
-            # PASO 8
-            st.markdown("### Paso 8: Reacciones Finales")
-            R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / a
-            R_Dx = -F - R_Ax # Por sumatoria de fuerzas en X
-            
-            col_r1, col_r2 = st.columns(2)
-            with col_r1:
-                st.markdown("**En el Apoyo A:**")
-                st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
-                st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
-            with col_r2:
-                st.markdown("**En el Apoyo D:**")
-                st.latex(rf"M_D = M_{{DC}} = {M_final.get('DC',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
-                st.latex(rf"R_{{Dx}} = {R_Dx:.4f} \text{{ {u_fuerza}}}")
+        X = (F - V0) / V1
+        st.latex(rf"X = \frac{{F - V_0}}{{V_1}} = {X:.4f}")
+        
+        # PASO 7
+        st.markdown("### Paso 7: Momentos Finales")
+        M_final = {k: M0[k] + X*M1[k] for k in orden_miembros}
+        df_final = pd.DataFrame([M_final], index=['Mom. Final'])
+        df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
+        st.dataframe(df_final.astype(float).round(4))
+        
+        # PASO 8
+        st.markdown("### Paso 8: Reacciones Finales")
+        R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / a
+        R_Dx = -F - R_Ax # Por sumatoria de fuerzas en X
+        
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            st.markdown("**En el Apoyo A:**")
+            st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Ax}} = {R_Ax:.4f} \text{{ {u_fuerza}}}")
+        with col_r2:
+            st.markdown("**En el Apoyo D:**")
+            st.latex(rf"M_D = M_{{DC}} = {M_final.get('DC',0):.4f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Dx}} = {R_Dx:.4f} \text{{ {u_fuerza}}}")
 
-            # PASO 9
-            st.markdown("### Paso 9: Diagramas de Cortante y Momento")
-            fig_res2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
-            coords = {'A':(0,0), 'B':(0,a), 'C':(b,a), 'D':(b+c,0)}
-            
-            # Escala segura 
-            max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
-            scale_m = (b * 0.15) / max_m if max_m > 1e-4 else 1.0
-            
-            ax_m.set_title("Diagrama de Momento Flexionante")
-            draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['D'][0], coords['D'][1])
-            for n1, n2 in [('A','B'), ('B','C'), ('C','D')]:
-                v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
-                draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.4f}", label2=f"{v2:.4f}")
-            
-            ax_v.set_title("Diagrama de Fuerza Cortante")
-            draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['D'][0], coords['D'][1])
-            V_vals = {}
-            for n1, n2, L, load in [('A','B',a,0), ('B','C',b,w), ('C','D',L_CD,0)]:
-                v_izq = load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-                v_der = -load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-                V_vals[n1+n2] = (v_izq, v_der)
-            
-            max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
-            scale_v = (b * 0.15) / max_v if max_v > 1e-4 else 1.0
-            
-            for (n1, n2), (v_izq, v_der) in V_vals.items():
-                draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
-            
-            for ax in (ax_v, ax_m): 
-                ax.set_xlim(-2, b+c+3); ax.set_ylim(-1, a+2)
-                ax.axis('off')
-            st.pyplot(fig_res2)
-            plt.close(fig_res2)
-            
-        except Exception as e:
-            st.error(f"Error interno al calcular factores o renderizar gráficos: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # PASO 9
+        st.markdown("### Paso 9: Diagramas de Cortante y Momento")
+        fig_res2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
+        coords = {'A':(0,0), 'B':(0,a), 'C':(b,a), 'D':(b+c,0)}
+        
+        # Escala segura 
+        max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
+        scale_m = (b * 0.15) / max_m if max_m > 1e-4 else 1.0
+        
+        ax_m.set_title("Diagrama de Momento Flexionante")
+        draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['D'][0], coords['D'][1])
+        for n1, n2 in [('A','B'), ('B','C'), ('C','D')]:
+            v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
+            draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.4f}", label2=f"{v2:.4f}")
+        
+        ax_v.set_title("Diagrama de Fuerza Cortante")
+        draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['D'][0], coords['D'][1])
+        V_vals = {}
+        for n1, n2, L, load in [('A','B',a,0), ('B','C',b,w), ('C','D',L_CD,0)]:
+            v_izq = load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            v_der = -load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            V_vals[n1+n2] = (v_izq, v_der)
+        
+        max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+        scale_v = (b * 0.15) / max_v if max_v > 1e-4 else 1.0
+        
+        for (n1, n2), (v_izq, v_der) in V_vals.items():
+            draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
+        
+        for ax in (ax_v, ax_m): 
+            ax.set_xlim(-2, b+c+3); ax.set_ylim(-1, a+2)
+            ax.axis('off')
+        st.pyplot(fig_res2)
+        plt.close(fig_res2)
 
 
 
