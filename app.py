@@ -4,19 +4,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import math
 
-st.set_page_config(page_title="Resolución Hardy Cross Completo", layout="wide")
-
-st.title("Análisis Estructural - Método de Hardy Cross Completo")
-st.markdown("Resolución iterativa incluyendo esquemas, tablas paso a paso y diagramas de Cortante y Momento Flexionante.")
-
-# --- CONFIGURACIÓN DE UNIDADES ---
-st.sidebar.header("Configuración de Unidades")
-u_fuerza = st.sidebar.selectbox("Unidad de Fuerza", ["ton", "N", "lb"])
-u_long = st.sidebar.selectbox("Unidad de Longitud", ["m", "ft", "in"])
-u_ang = st.sidebar.selectbox("Unidad de Ángulo", ["Grados", "Radianes"])
+st.set_page_config(page_title="Hardy Cross - Marcos", layout="wide")
 
 # ==========================================
-# FUNCIONES DE DIBUJO DE DIAGRAMAS
+# FUNCIONES DE DIBUJO
 # ==========================================
 def draw_support(ax, x, y, nx=0, ny=-1):
     if nx == 0:
@@ -28,6 +19,13 @@ def draw_support(ax, x, y, nx=0, ny=-1):
         for i in np.linspace(-0.4, 0.3, 6):
             xi, yi = x + i*ny, y - i*nx
             ax.plot([xi, xi+0.1*nx], [yi, yi+0.1*ny], 'k-', lw=1)
+
+def draw_distributed_load(ax, x1, x2, y, label):
+    ax.plot([x1, x2], [y+0.5, y+0.5], 'r-', lw=1)
+    for px in np.linspace(x1, x2, int((x2-x1)*3)+2):
+        ax.annotate('', xy=(px, y), xytext=(px, y+0.5),
+                    arrowprops=dict(arrowstyle='->', color='red', lw=1))
+    ax.text((x1+x2)/2, y+0.7, label, color='red', ha='center', weight='bold')
 
 def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1="", label2="", draw_member=True):
     dx, dy = x2 - x1, y2 - y1
@@ -55,7 +53,7 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
     if abs(v2) > 0.001: ax.text(px2 + 0.3*nx, py2 + 0.3*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
 
 # ==========================================
-# FUNCIÓN GENERADORA DE TABLAS
+# FUNCIÓN GENERADORA DE TABLAS CROSS
 # ==========================================
 def tabla_cross_paso_a_paso(nodos_fd, barras, FEM, iteraciones, orden_miembros, nombre_m_inicial="M. IMPUESTO"):
     columnas_tuplas = [(m[0], m) for m in orden_miembros]
@@ -107,67 +105,69 @@ def tabla_cross_paso_a_paso(nodos_fd, barras, FEM, iteraciones, orden_miembros, 
     
     return pd.DataFrame(filas, index=nombres_filas, columns=columnas), M_actual
 
-# ==========================================
-# MENÚ DE SELECCIÓN
-# ==========================================
-ejercicio = st.sidebar.radio("Selecciona el tipo de marco:", ("Ejercicio 1: Marco de 3 Niveles", "Ejercicio 2: Marco con Columna Inclinada"))
+st.title("Análisis Estructural - Método de Hardy Cross")
 
-if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
+ejercicio = st.sidebar.radio("Selecciona el marco:", ("Ejercicio 1: 3 Niveles", "Ejercicio 2: Columna Inclinada"))
+
+if ejercicio == "Ejercicio 1: 3 Niveles":
     st.header("Marco con Tres Niveles y Una Crujía")
     
-    # ESQUEMA INICIAL EJERCICIO 1
-    st.markdown("### Esquema de Referencia con Variables")
-    fig_ref1, ax_ref1 = plt.subplots(figsize=(6, 8))
-    # Marco principal
-    ax_ref1.plot([0, 0], [0, 10], 'k-', lw=3); ax_ref1.plot([4, 4], [0, 10], 'k-', lw=3)
-    ax_ref1.plot([0, 4], [4, 4], 'k-', lw=3); ax_ref1.plot([0, 4], [7, 7], 'k-', lw=3); ax_ref1.plot([0, 4], [10, 10], 'k-', lw=3)
-    # Voladizos
-    ax_ref1.plot([4, 5.5], [4, 4], 'k-', lw=3); ax_ref1.plot([4, 5.5], [7, 7], 'k-', lw=3); ax_ref1.plot([4, 5.5], [10, 10], 'k-', lw=3)
-    # Nodos
-    ax_ref1.text(-0.5, 0, 'A', fontsize=12, weight='bold'); ax_ref1.text(4.2, 0, 'H', fontsize=12, weight='bold')
-    ax_ref1.text(-0.5, 4, 'B', fontsize=12, weight='bold'); ax_ref1.text(-0.5, 7, 'C', fontsize=12, weight='bold'); ax_ref1.text(-0.5, 10, 'D', fontsize=12, weight='bold')
-    ax_ref1.text(3.5, 4, 'G', fontsize=12, weight='bold'); ax_ref1.text(3.5, 7, 'F', fontsize=12, weight='bold'); ax_ref1.text(3.5, 10, 'E', fontsize=12, weight='bold')
-    # Fuerzas laterales
-    ax_ref1.annotate('F1', xy=(0, 10), xytext=(-2, 10), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
-    ax_ref1.annotate('F2', xy=(0, 7), xytext=(-2, 7), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
-    ax_ref1.annotate('F3', xy=(0, 4), xytext=(-2, 4), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
-    # Cotas
-    ax_ref1.text(-1, 2, 'L3', color='blue'); ax_ref1.text(-1, 5.5, 'L4', color='blue'); ax_ref1.text(-1, 8.5, 'L5', color='blue')
-    ax_ref1.text(2, 10.5, 'w1, L1', color='green'); ax_ref1.text(4.5, 10.5, 'P1, L2', color='green')
-    ax_ref1.set_xlim(-3, 7); ax_ref1.set_ylim(-1, 12); ax_ref1.axis('off')
-    st.pyplot(fig_ref1)
-    plt.close(fig_ref1)
+    # DIBUJO DEL ESQUEMA INICIAL EJERCICIO 1
+    fig_ref1, ax_ref1 = plt.subplots(figsize=(8, 7))
+    # Marco principal y voladizos
+    ax_ref1.plot([0, 0], [0, 9], 'b-', lw=2); ax_ref1.plot([5, 5], [0, 9], 'b-', lw=2)
+    ax_ref1.plot([0, 7], [3, 3], 'b-', lw=2); ax_ref1.plot([0, 7], [6, 6], 'b-', lw=2); ax_ref1.plot([0, 7], [9, 9], 'b-', lw=2)
+    draw_support(ax_ref1, 0, 0); draw_support(ax_ref1, 5, 0)
+    
+    # Textos de Nodos e Inercias
+    ax_ref1.text(-0.3, 0, 'A', weight='bold'); ax_ref1.text(5.2, 0, 'H', weight='bold')
+    ax_ref1.text(-0.3, 3, 'B', weight='bold'); ax_ref1.text(-0.3, 6, 'C', weight='bold'); ax_ref1.text(-0.3, 9, 'D', weight='bold')
+    ax_ref1.text(4.7, 3, 'G', weight='bold'); ax_ref1.text(4.7, 6, 'F', weight='bold'); ax_ref1.text(4.7, 9, 'E', weight='bold')
+    
+    ax_ref1.text(0.2, 1.5, 'aI', color='teal', weight='bold'); ax_ref1.text(5.2, 1.5, 'aI', color='teal', weight='bold')
+    ax_ref1.text(0.2, 4.5, 'bI', color='teal', weight='bold'); ax_ref1.text(5.2, 4.5, 'bI', color='teal', weight='bold')
+    ax_ref1.text(0.2, 7.5, 'cI', color='teal', weight='bold'); ax_ref1.text(5.2, 7.5, 'cI', color='teal', weight='bold')
+    ax_ref1.text(2.5, 2.7, 'dI', color='teal', weight='bold'); ax_ref1.text(2.5, 5.7, 'dI', color='teal', weight='bold'); ax_ref1.text(2.5, 8.7, 'dI', color='teal', weight='bold')
 
-    st.subheader("Parámetros de Entrada")
+    # Cargas Distribuidas y Puntuales
+    draw_distributed_load(ax_ref1, 0, 7, 9, '$w_1$'); draw_distributed_load(ax_ref1, 0, 7, 6, '$w_2$'); draw_distributed_load(ax_ref1, 0, 7, 3, '$w_3$')
+    ax_ref1.annotate('$P_1$', xy=(7, 9), xytext=(7, 10), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', ha='center')
+    ax_ref1.annotate('$P_2$', xy=(7, 6), xytext=(7, 7), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', ha='center')
+    ax_ref1.annotate('$P_3$', xy=(7, 3), xytext=(7, 4), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', ha='center')
+    
+    # Fuerzas Laterales
+    ax_ref1.annotate('$F_1$', xy=(0, 9), xytext=(-2, 9), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
+    ax_ref1.annotate('$F_2$', xy=(0, 6), xytext=(-2, 6), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
+    ax_ref1.annotate('$F_3$', xy=(0, 3), xytext=(-2, 3), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
+    
+    # Cotas
+    ax_ref1.text(7.5, 1.5, '$L_3$', va='center'); ax_ref1.text(7.5, 4.5, '$L_4$', va='center'); ax_ref1.text(7.5, 7.5, '$L_5$', va='center')
+    ax_ref1.text(2.5, -1, '$L_1$', ha='center'); ax_ref1.text(6, -1, '$L_2$', ha='center')
+    
+    ax_ref1.set_xlim(-3, 9); ax_ref1.set_ylim(-2, 11); ax_ref1.axis('off')
+    st.pyplot(fig_ref1)
+    
+    # Parámetros (sin Inercia explícita como magnitud, usando los coeficientes)
     col1, col2, col3 = st.columns(3)
     with col1:
-        L1 = st.number_input(f"L1 (Viga) ({u_long})", value=5.0)
-        L2 = st.number_input(f"L2 (Voladizo) ({u_long})", value=1.5)
-        L3 = st.number_input(f"L3 (Altura N1) ({u_long})", value=4.0)
-        L4 = st.number_input(f"L4 (Altura N2) ({u_long})", value=3.0)
-        L5 = st.number_input(f"L5 (Altura N3) ({u_long})", value=3.0)
+        L1 = st.number_input("L1 (m)", value=5.0); L2 = st.number_input("L2 (m)", value=1.5)
+        L3 = st.number_input("L3 (m)", value=4.0); L4 = st.number_input("L4 (m)", value=3.0); L5 = st.number_input("L5 (m)", value=3.0)
     with col2:
-        w1 = st.number_input(f"w1 (Dist. N3) ({u_fuerza}/{u_long})", value=2.0)
-        P1 = st.number_input(f"P1 (Puntual N3) ({u_fuerza})", value=2.0)
-        F1 = st.number_input(f"F1 (Lateral N3) ({u_fuerza})", value=8.0)
-        w2 = st.number_input(f"w2 (Dist. N2) ({u_fuerza}/{u_long})", value=3.0)
-        P2 = st.number_input(f"P2 (Puntual N2) ({u_fuerza})", value=2.0)
-        F2 = st.number_input(f"F2 (Lateral N2) ({u_fuerza})", value=6.0)
-        w3 = st.number_input(f"w3 (Dist. N1) ({u_fuerza}/{u_long})", value=3.0)
-        P3 = st.number_input(f"P3 (Puntual N1) ({u_fuerza})", value=2.0)
-        F3 = st.number_input(f"F3 (Lateral N1) ({u_fuerza})", value=4.0)
+        w1 = st.number_input("w1 (Ton/m)", value=2.0); P1 = st.number_input("P1 (Ton)", value=2.0); F1 = st.number_input("F1 (Ton)", value=8.0)
+        w2 = st.number_input("w2 (Ton/m)", value=3.0); P2 = st.number_input("P2 (Ton)", value=2.0); F2 = st.number_input("F2 (Ton)", value=6.0)
+        w3 = st.number_input("w3 (Ton/m)", value=3.0); P3 = st.number_input("P3 (Ton)", value=2.0); F3 = st.number_input("F3 (Ton)", value=4.0)
     with col3:
-        I_a = st.number_input(f"Ia (Col. N1) ({u_long}^4)", value=4.0)
-        I_b = st.number_input(f"Ib (Col. N2) ({u_long}^4)", value=3.0)
-        I_c = st.number_input(f"Ic (Col. N3) ({u_long}^4)", value=2.0)
-        I_d = st.number_input(f"Id (Vigas) ({u_long}^4)", value=1.0)
+        a_coef = st.number_input("Coeficiente Inercia a", value=4.0)
+        b_coef = st.number_input("Coeficiente Inercia b", value=3.0)
+        c_coef = st.number_input("Coeficiente Inercia c", value=2.0)
+        d_coef = st.number_input("Coeficiente Inercia d", value=1.0)
 
     if st.button("Resolver Ejercicio 1"):
-        st.write("---")
-        K_AB = I_a / L3; K_GH = K_AB
-        K_BC = I_b / L4; K_FG = K_BC
-        K_CD = I_c / L5; K_EF = K_CD
-        K_V = I_d / L1
+        # Cálculo de rigideces proporcionales
+        K_AB = a_coef / L3; K_GH = K_AB
+        K_BC = b_coef / L4; K_FG = K_BC
+        K_CD = c_coef / L5; K_EF = K_CD
+        K_V = d_coef / L1
         
         S_B = K_AB + K_BC + K_V; S_C = K_BC + K_CD + K_V; S_D = K_CD + K_V
         S_E = K_CD + K_V; S_F = K_BC + K_CD + K_V; S_G = K_AB + K_BC + K_V
@@ -190,23 +190,23 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
             'FVol': -(w2*L2**2)/2 - P2*L2, 'GVol': -(w3*L2**2)/2 - P3*L2
         }
         
-        st.subheader("Tablas de Iteración")
-        df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 15, orden_miembros, "M. INICIAL")
+        st.subheader("Desglose de Tablas de Iteración (Hardy Cross)")
+        df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 10, orden_miembros, "M. INICIAL")
         st.markdown("**Estado 0 (Cargas Reales)**")
         st.dataframe(df_estado0.style.format("{:.3f}"))
         
         FEM_1 = {'AB': -100, 'BA': -100, 'GH': -100, 'HG': -100}
-        df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 15, orden_miembros, "M. IMPUESTO (\u03941)")
+        df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 10, orden_miembros, "M. IMPUESTO (\u03941)")
         st.markdown("**Estado 1 (Desplazamiento Nivel 1)**")
         st.dataframe(df_estado1.style.format("{:.3f}"))
         
         FEM_2 = {'BC': -100, 'CB': -100, 'FG': -100, 'GF': -100}
-        df_estado2, M2 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_2, 15, orden_miembros, "M. IMPUESTO (\u03942)")
+        df_estado2, M2 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_2, 10, orden_miembros, "M. IMPUESTO (\u03942)")
         st.markdown("**Estado 2 (Desplazamiento Nivel 2)**")
         st.dataframe(df_estado2.style.format("{:.3f}"))
         
         FEM_3 = {'CD': -100, 'DC': -100, 'EF': -100, 'FE': -100}
-        df_estado3, M3 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_3, 15, orden_miembros, "M. IMPUESTO (\u03943)")
+        df_estado3, M3 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_3, 10, orden_miembros, "M. IMPUESTO (\u03943)")
         st.markdown("**Estado 3 (Desplazamiento Nivel 3)**")
         st.dataframe(df_estado3.style.format("{:.3f}"))
         
@@ -229,9 +229,10 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         st.dataframe(df_final.style.format("{:.4f}"))
         
         st.subheader("Diagramas de Cortante y Momento")
-        fig, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
+        fig_res, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
         coords = {'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5)}
         
+        # Factor de escala visual
         max_m = max([abs(v) for v in M_final.values()]) or 1.0
         scale_m = (L1 * 0.15) / max_m
         
@@ -256,85 +257,80 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         for (n1, n2), (v_izq, v_der) in V_vals.items():
             draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
             
-        for ax in (ax_v, ax_m): ax.axis('equal'); ax.axis('off')
-        st.pyplot(fig)
+        for ax in (ax_v, ax_m): 
+            ax.set_xlim(-2, L1+3); ax.set_ylim(-1, L3+L4+L5+2)
+            ax.axis('off')
+        st.pyplot(fig_res)
 
 
-elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
+elif ejercicio == "Ejercicio 2: Columna Inclinada":
     st.header("Marco con una Columna Inclinada")
     
-    st.markdown("### Esquema de Referencia con Variables")
-    fig_ref2, ax_ref2 = plt.subplots(figsize=(7, 5))
-    ax_ref2.plot([0, 0], [0, 3], 'k-', lw=3)
-    ax_ref2.plot([0, 4], [3, 3], 'b-', lw=3)
-    ax_ref2.plot([4, 6], [3, 0], 'r-', lw=3)
+    # DIBUJO DEL ESQUEMA INICIAL EJERCICIO 2
+    fig_ref2, ax_ref2 = plt.subplots(figsize=(8, 6))
+    ax_ref2.plot([0, 0], [0, 4], 'b-', lw=2); ax_ref2.plot([0, 5], [4, 4], 'b-', lw=2); ax_ref2.plot([5, 8], [4, 0], 'b-', lw=2)
+    draw_support(ax_ref2, 0, 0); draw_support(ax_ref2, 8, 0)
     
-    ax_ref2.plot([-0.3, 0.3], [0, 0], 'k-', lw=3)
-    for i in np.linspace(-0.3, 0.2, 5): ax_ref2.plot([i, i+0.1], [0, -0.2], 'k-', lw=1)
-    ax_ref2.plot([5.7, 6.3], [0, 0], 'k-', lw=3)
-    for i in np.linspace(5.7, 6.2, 5): ax_ref2.plot([i, i+0.1], [0, -0.2], 'k-', lw=1)
+    ax_ref2.text(-0.3, 0, 'A', weight='bold'); ax_ref2.text(-0.3, 4, 'B', weight='bold')
+    ax_ref2.text(5.2, 4, 'C', weight='bold'); ax_ref2.text(8.3, 0, 'D', weight='bold')
     
-    ax_ref2.text(0.4, 0.2, 'A', fontsize=12, weight='bold'); ax_ref2.text(-0.3, 3.2, 'B', fontsize=12, weight='bold')
-    ax_ref2.text(4, 3.2, 'C', fontsize=12, weight='bold'); ax_ref2.text(6.3, 0.2, 'D', fontsize=12, weight='bold')
+    ax_ref2.text(0.2, 2, 'I', color='teal', weight='bold'); ax_ref2.text(2.5, 3.7, 'I', color='teal', weight='bold'); ax_ref2.text(6.7, 2.2, 'I', color='teal', weight='bold')
     
-    ax_ref2.plot([0, 4], [3.2, 3.2], 'g-', lw=1)
-    for x_val in np.linspace(0, 4, 15): ax_ref2.plot([x_val, x_val], [3, 3.2], 'g-', lw=1)
-    ax_ref2.text(2, 3.4, 'w_dist, b (viga_L)', color='green', ha='center')
+    draw_distributed_load(ax_ref2, 0, 5, 4, '$w$')
+    ax_ref2.annotate('$F$', xy=(0, 4), xytext=(-2, 4), arrowprops=dict(facecolor='red', width=1, headwidth=5), color='red', va='center')
     
-    # Textos de cotas
-    ax_ref2.text(-0.8, 1.5, 'a (h)', color='blue', rotation=90)
-    ax_ref2.text(5.5, 1.5, 'c (proy_x)', color='blue')
+    # Cotas y ángulos
+    ax_ref2.text(-1, 2, '$a$', va='center', color='black'); ax_ref2.text(2.5, 5.2, '$b$', ha='center', color='black'); ax_ref2.text(6.5, 5.2, '$c$', ha='center', color='black')
+    ax_ref2.plot([5, 5], [4, 5.5], 'k--', lw=0.5); ax_ref2.plot([8, 8], [0, 5.5], 'k--', lw=0.5)
     
-    # Fuerza P (Alineada hacia la derecha)
-    ax_ref2.annotate('P', xy=(0, 3), xytext=(-2.5, 3), arrowprops=dict(facecolor='red', shrink=0, width=2, headwidth=8), fontsize=12, color='red', va='center')
+    # Angulo Theta
+    ax_ref2.plot([7, 9], [0, 0], 'k-', lw=1)
+    theta_arc = np.linspace(np.pi - np.arctan(4/3), np.pi, 20)
+    ax_ref2.plot(8 + 0.8*np.cos(theta_arc), 0.8*np.sin(theta_arc), 'r-', lw=1.5)
+    ax_ref2.text(7.3, 0.4, r'$\theta$', color='red', weight='bold')
     
-    ax_ref2.set_xlim(-3, 7); ax_ref2.set_ylim(-1, 4.5); ax_ref2.axis('off')
+    ax_ref2.set_xlim(-3, 10); ax_ref2.set_ylim(-1, 6); ax_ref2.axis('off')
     st.pyplot(fig_ref2)
-    plt.close(fig_ref2)
-
-    st.subheader("Parámetros de Entrada")
+    
+    # Parámetros (Inercia como coeficiente común I=1 implícito en los cálculos)
     col1, col2 = st.columns(2)
     with col1:
-        h = st.number_input(f"Altura col recta a ({u_long})", value=3.0)
-        viga_L = st.number_input(f"Longitud viga b ({u_long})", value=3.5)
-        proy_x = st.number_input(f"Proyección X col incl. c ({u_long})", value=2.0)
-        ang_simbolo = "°" if u_ang == "Grados" else "rad"
-        angulo = st.number_input(f"Ángulo inclinación θ ({ang_simbolo})", value=40.0)
+        a = st.number_input("Altura columna a (m)", value=3.0)
+        b = st.number_input("Longitud viga b (m)", value=3.5)
+        c = st.number_input("Proyección columna c (m)", value=2.0)
     with col2:
-        w_dist = st.number_input(f"Carga dist viga w_dist ({u_fuerza}/{u_long})", value=2.0)
-        P = st.number_input(f"Carga Horizontal P ({u_fuerza})", value=3.0)
-        I_val = st.number_input(f"Inercia I constante ({u_long}^4)", value=1.0)
+        w = st.number_input("Carga distribuida w (Ton/m)", value=2.0)
+        F = st.number_input("Fuerza F (Ton)", value=3.0)
 
     if st.button("Resolver Ejercicio 2"):
-        st.write("---")
-        if u_ang == "Grados": L_CD = proy_x / np.cos(np.radians(angulo))
-        else: L_CD = proy_x / np.cos(angulo)
+        L_CD = math.hypot(c, a)
+        K_AB = 1.0 / a; K_BC = 1.0 / b; K_CD = 1.0 / L_CD
         
-        K_AB = I_val / h; K_BC = I_val / viga_L; K_CD = I_val / L_CD
         FD_BA = K_AB/(K_AB+K_BC); FD_BC = K_BC/(K_AB+K_BC)
         FD_CB = K_BC/(K_BC+K_CD); FD_CD = K_CD/(K_BC+K_CD)
         
         nodos_fd = {'A': {'B': 0.0}, 'D': {'C': 0.0}, 'B': {'A': FD_BA, 'C': FD_BC}, 'C': {'B': FD_CB, 'D': FD_CD}}
         barras = [('A','B'), ('B','C'), ('C','D')]; orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC']
         
-        st.subheader("Tablas de Iteración")
-        FEM_0 = {'BC': -(w_dist * viga_L**2)/12, 'CB': (w_dist * viga_L**2)/12}
-        df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 4, orden_miembros, "M. INICIAL")
+        FEM_0 = {'BC': -(w * b**2)/12, 'CB': (w * b**2)/12}
+        
+        st.subheader("Desglose de Tablas de Iteración (Hardy Cross)")
+        df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 6, orden_miembros, "M. INICIAL")
         st.markdown("**Estado 0 (Cargas Reales)**")
         st.dataframe(df_estado0.style.format("{:.3f}"))
         
-        M_AB_imp = -10.0
-        M_CD_imp = (h**2 * M_AB_imp) / (L_CD**2)
+        M_AB_imp = -100.0
+        M_CD_imp = (a**2 * M_AB_imp) / (L_CD**2)
         FEM_1 = {'AB': M_AB_imp, 'BA': M_AB_imp, 'CD': M_CD_imp, 'DC': M_CD_imp}
-        df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 4, orden_miembros, "M. IMPUESTO")
+        df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 6, orden_miembros, "M. IMPUESTO")
         st.markdown("**Estado 1 (Desplazamiento Lateral)**")
         st.dataframe(df_estado1.style.format("{:.3f}"))
         
-        V0 = -(M0.get('AB',0) + M0.get('BA',0))/h - (M0.get('CD',0) + M0.get('DC',0))/h
-        V1 = -(M1.get('AB',0) + M1.get('BA',0))/h - (M1.get('CD',0) + M1.get('DC',0))/h
+        V0 = -(M0.get('AB',0) + M0.get('BA',0))/a - (M0.get('CD',0) + M0.get('DC',0))/a
+        V1 = -(M1.get('AB',0) + M1.get('BA',0))/a - (M1.get('CD',0) + M1.get('DC',0))/a
         
         if V1 != 0:
-            X = (P - V0) / V1
+            X = (F - V0) / V1
             M_final = {k: M0[k] + X*M1[k] for k in orden_miembros}
             
             st.subheader("Momentos Finales")
@@ -343,55 +339,36 @@ elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
             st.dataframe(df_final.style.format("{:.4f}"))
             
             st.subheader("Diagramas de Cortante y Momento")
-            fig2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
-            coords = {'A':(0,0), 'B':(0,h), 'C':(viga_L,h), 'D':(viga_L+proy_x,0)}
+            fig_res2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
+            coords = {'A':(0,0), 'B':(0,a), 'C':(b,a), 'D':(b+c,0)}
             
             max_m = max([abs(v) for v in M_final.values()]) or 1.0
-            scale_m = (viga_L * 0.15) / max_m
+            scale_m = (b * 0.15) / max_m
             
             ax_m.set_title("Diagrama de Momento Flexionante")
             draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['D'][0], coords['D'][1])
             for n1, n2 in [('A','B'), ('B','C'), ('C','D')]:
                 v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
-                draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.4f}", label2=f"{v2:.4f}")
+                draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.3f}", label2=f"{v2:.3f}")
             
             ax_v.set_title("Diagrama de Fuerza Cortante")
             draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['D'][0], coords['D'][1])
             V_vals = {}
-            for n1, n2, L, w in [('A','B',h,0), ('B','C',viga_L,w_dist), ('C','D',L_CD,0)]:
-                v_izq = w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-                v_der = -w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+            for n1, n2, L, load in [('A','B',a,0), ('B','C',b,w), ('C','D',L_CD,0)]:
+                v_izq = load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
+                v_der = -load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
                 V_vals[n1+n2] = (v_izq, v_der)
             
             max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()]) or 1.0
-            scale_v = (viga_L * 0.15) / max_v
+            scale_v = (b * 0.15) / max_v
             
             for (n1, n2), (v_izq, v_der) in V_vals.items():
-                draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
+                draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.3f}", label2=f"{abs(v_der):.3f}")
             
-            for ax in (ax_v, ax_m): ax.axis('equal'); ax.axis('off')
-            st.pyplot(fig2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            for ax in (ax_v, ax_m): 
+                ax.set_xlim(-2, b+c+3); ax.set_ylim(-1, a+2)
+                ax.axis('off')
+            st.pyplot(fig_res2)
 
 
 
