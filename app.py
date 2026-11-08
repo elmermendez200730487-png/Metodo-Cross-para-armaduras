@@ -1,3 +1,9 @@
+import sys
+sys.setrecursionlimit(5000)
+
+import matplotlib
+matplotlib.use('Agg')
+
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,18 +13,23 @@ import math
 st.set_page_config(page_title="Hardy Cross - Marcos", layout="wide")
 
 # ==========================================
-# FUNCIONES DE DIBUJO DE DIAGRAMAS
+# FUNCIONES DE DIBUJO DE DIAGRAMAS (OPTIMIZADAS)
 # ==========================================
 def draw_support(ax, x, y, nx=0, ny=-1):
+    hx, hy = [], []
     if nx == 0:
         ax.plot([x-0.4, x+0.4], [y, y], 'k-', lw=2)
         for i in np.linspace(-0.4, 0.3, 6):
-            ax.plot([x+i, x+i+0.1], [y, y-0.2], 'k-', lw=1)
+            hx.extend([x+i, x+i+0.1, np.nan])
+            hy.extend([y, y-0.2, np.nan])
     else:
         ax.plot([x-0.4*ny, x+0.4*ny], [y+0.4*nx, y-0.4*nx], 'k-', lw=2)
         for i in np.linspace(-0.4, 0.3, 6):
             xi, yi = x + i*ny, y - i*nx
-            ax.plot([xi, xi+0.1*nx], [yi, yi+0.1*ny], 'k-', lw=1)
+            hx.extend([xi, xi+0.1*nx, np.nan])
+            hy.extend([yi, yi+0.1*ny, np.nan])
+            
+    if hx: ax.plot(hx, hy, 'k-', lw=1)
 
 def draw_distributed_load(ax, x1, x2, y, label):
     ax.plot([x1, x2], [y+0.5, y+0.5], 'r-', lw=1)
@@ -41,13 +52,19 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
         
     ax.plot([x1, px1, px2, x2], [y1, py1, py2, y2], color=color, lw=1.2)
     
+    # Acumulamos las líneas de sombreado en un solo objeto gráfico para evitar error de memoria
     num_hatches = max(5, int(L * 8))
+    hx, hy = [], []
     for i in range(1, num_hatches):
         t = i / num_hatches
         bx, by = x1 + t*dx, y1 + t*dy
         vt = v1 + t*(v2 - v1)
         tx, ty = bx + vt * scale * nx, by + vt * scale * ny
-        ax.plot([bx, tx], [by, ty], color=color, lw=0.6, alpha=0.6)
+        hx.extend([bx, tx, np.nan])
+        hy.extend([by, ty, np.nan])
+        
+    if hx:
+        ax.plot(hx, hy, color=color, lw=0.6, alpha=0.6)
         
     if abs(v1) > 0.001: ax.text(px1 + 0.3*nx, py1 + 0.3*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
     if abs(v2) > 0.001: ax.text(px2 + 0.3*nx, py2 + 0.3*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
@@ -216,22 +233,22 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         st.markdown("### Paso 4: Desglose de Tablas de Iteración (Hardy Cross)")
         df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 10, orden_miembros, "M. INICIAL")
         with st.expander("Ver Tabla Estado 0 (Cargas Reales)", expanded=True):
-            st.dataframe(df_estado0.style.format("{:.3f}"))
+            st.dataframe(df_estado0.round(3))
         
         FEM_1 = {'AB': -100, 'BA': -100, 'GH': -100, 'HG': -100}
         df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 10, orden_miembros, "M. IMPUESTO (\u03941)")
         with st.expander("Ver Tabla Estado 1 (Desplazamiento Nivel 1)"):
-            st.dataframe(df_estado1.style.format("{:.3f}"))
+            st.dataframe(df_estado1.round(3))
         
         FEM_2 = {'BC': -100, 'CB': -100, 'FG': -100, 'GF': -100}
         df_estado2, M2 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_2, 10, orden_miembros, "M. IMPUESTO (\u03942)")
         with st.expander("Ver Tabla Estado 2 (Desplazamiento Nivel 2)"):
-            st.dataframe(df_estado2.style.format("{:.3f}"))
+            st.dataframe(df_estado2.round(3))
         
         FEM_3 = {'CD': -100, 'DC': -100, 'EF': -100, 'FE': -100}
         df_estado3, M3 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_3, 10, orden_miembros, "M. IMPUESTO (\u03943)")
         with st.expander("Ver Tabla Estado 3 (Desplazamiento Nivel 3)"):
-            st.dataframe(df_estado3.style.format("{:.3f}"))
+            st.dataframe(df_estado3.round(3))
         
         # PASO 5
         st.markdown("### Paso 5: Factores de Corrección")
@@ -252,9 +269,10 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             
             # PASO 6
             st.markdown("### Paso 6: Momentos Finales")
+            # Convertido a .round(4) sin uso de .style.format() para prevenir error interno de Streamlit Styler recursivo
             df_final = pd.DataFrame([M_final], index=['Mom. Final'])
             df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
-            st.dataframe(df_final.style.format("{:.4f}"))
+            st.dataframe(df_final.astype(float).round(4))
             
             # PASO 7
             st.markdown("### Paso 7: Reacciones Finales")
@@ -276,8 +294,9 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             fig_res1, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, 8))
             coords = {'A':(0,0), 'B':(0,L3), 'C':(0,L3+L4), 'D':(0,L3+L4+L5), 'H':(L1,0), 'G':(L1,L3), 'F':(L1,L3+L4), 'E':(L1,L3+L4+L5)}
             
-            max_m = max([abs(v) for v in M_final.values()]) or 1.0
-            scale_m = (L1 * 0.15) / max_m
+            # Ajuste de escala segura 
+            max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
+            scale_m = (L1 * 0.15) / max_m if max_m > 1e-4 else 1.0
             
             ax_m.set_title("Diagrama de Momento Flexionante")
             draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['H'][0], coords['H'][1])
@@ -294,8 +313,8 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
                 v_der = -w*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
                 V_vals[n1+n2] = (v_izq, v_der)
             
-            max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()]) or 1.0
-            scale_v = (L1 * 0.15) / max_v
+            max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+            scale_v = (L1 * 0.15) / max_v if max_v > 1e-4 else 1.0
             
             for (n1, n2), (v_izq, v_der) in V_vals.items():
                 draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
@@ -392,11 +411,11 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         
         df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 6, orden_miembros, "M. INICIAL")
         st.markdown("**Tabla Estado 0 (Cargas Reales)**")
-        st.dataframe(df_estado0.style.format("{:.3f}"))
+        st.dataframe(df_estado0.round(3))
         
         df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 6, orden_miembros, "M. IMPUESTO")
         st.markdown("**Tabla Estado 1 (Desplazamiento Lateral)**")
-        st.dataframe(df_estado1.style.format("{:.3f}"))
+        st.dataframe(df_estado1.round(3))
         
         # PASO 6
         st.markdown("### Paso 6: Factor de Corrección por Desplazamiento")
@@ -412,7 +431,7 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             M_final = {k: M0[k] + X*M1[k] for k in orden_miembros}
             df_final = pd.DataFrame([M_final], index=['Mom. Final'])
             df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
-            st.dataframe(df_final.style.format("{:.4f}"))
+            st.dataframe(df_final.astype(float).round(4))
             
             # PASO 8
             st.markdown("### Paso 8: Reacciones Finales")
@@ -434,8 +453,9 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             fig_res2, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(14, 6))
             coords = {'A':(0,0), 'B':(0,a), 'C':(b,a), 'D':(b+c,0)}
             
-            max_m = max([abs(v) for v in M_final.values()]) or 1.0
-            scale_m = (b * 0.15) / max_m
+            # Escala segura 
+            max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
+            scale_m = (b * 0.15) / max_m if max_m > 1e-4 else 1.0
             
             ax_m.set_title("Diagrama de Momento Flexionante")
             draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['D'][0], coords['D'][1])
@@ -451,8 +471,8 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
                 v_der = -load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
                 V_vals[n1+n2] = (v_izq, v_der)
             
-            max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()]) or 1.0
-            scale_v = (b * 0.15) / max_v
+            max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+            scale_v = (b * 0.15) / max_v if max_v > 1e-4 else 1.0
             
             for (n1, n2), (v_izq, v_der) in V_vals.items():
                 draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
@@ -465,24 +485,6 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
             
         except Exception as e:
             st.error(f"Error interno al calcular factores o renderizar gráficos: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
