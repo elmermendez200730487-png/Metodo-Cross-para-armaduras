@@ -13,7 +13,7 @@ import math
 st.set_page_config(page_title="Hardy Cross - Marcos", layout="wide")
 
 # ==========================================
-# FUNCIONES DE DIBUJO DE DIAGRAMAS (OPTIMIZADAS)
+# FUNCIONES DE DIBUJO DE DIAGRAMAS
 # ==========================================
 def draw_support(ax, x, y, nx=0, ny=-1):
     hx, hy = [], []
@@ -51,8 +51,6 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
         ax.plot([x1, x2], [y1, y2], 'k-', lw=2.5)
         
     ax.plot([x1, px1, px2, x2], [y1, py1, py2, y2], color=color, lw=1.2)
-    
-    # Relleno semitransparente
     ax.fill_between([x1, x2], [y1, y2], [py1, py2], color=color, alpha=0.2)
         
     if abs(v1) > 0.001: ax.text(px1 + 0.3*nx, py1 + 0.3*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
@@ -172,7 +170,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
     if st.button("Resolver Ejercicio 1"):
         st.write("---")
         
-        # PASO 1
         st.markdown("### Paso 1: Rigideces Angulares (K)")
         K_AB = a_coef / L3; K_GH = K_AB
         K_BC = b_coef / L4; K_FG = K_BC
@@ -195,37 +192,47 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             'G': {'B': K_V/S_G, 'F': K_BC/S_G, 'H': K_AB/S_G, 'Vol': 0.0}
         }
         
-        # PASO 2 a PASO 6 OMITIDOS VISUALMENTE AQUÍ PARA BREVEDAD, PERO COMPLETOS EN CÓDIGO
         st.markdown("### Paso 2: Factores de Distribución (FD)")
         st.latex(r"\text{Nodos A y H (Empotramientos):} \quad FD_{AB}=0.0000, \quad FD_{HG}=0.0000")
         
         barras = [('A','B'), ('B','C'), ('C','D'), ('D','E'), ('C','F'), ('B','G'), ('E','F'), ('F','G'), ('G','H')]
         orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC', 'DE', 'ED', 'EVol', 'EF', 'FE', 'FVol', 'FC', 'CF', 'FG', 'GF', 'GVol', 'GB', 'BG', 'GH', 'HG']
         
+        # DEFINICIÓN DE MOMENTOS PARA PASO 3
         FEM_0 = {
             'DE': -(w1*L1**2)/12, 'ED': (w1*L1**2)/12, 'CF': -(w2*L1**2)/12, 'FC': (w2*L1**2)/12,
             'BG': -(w3*L1**2)/12, 'GB': (w3*L1**2)/12, 'EVol': -(w1*L2**2)/2 - P1*L2,
             'FVol': -(w2*L2**2)/2 - P2*L2, 'GVol': -(w3*L2**2)/2 - P3*L2
         }
+        FEM_1 = {'AB': -100, 'BA': -100, 'GH': -100, 'HG': -100}
+        FEM_2 = {'BC': -100, 'CB': -100, 'FG': -100, 'GF': -100}
+        FEM_3 = {'CD': -100, 'DC': -100, 'EF': -100, 'FE': -100}
         
         st.markdown("### Paso 3: Momentos de Empotramiento (Iniciales e Impuestos)")
+        st.write("**Estado 0 (Cargas Reales en Vigas y Voladizos):**")
+        st.latex(rf"M_{{DE}} = {FEM_0['DE']:.2f}, \quad M_{{ED}} = {FEM_0['ED']:.2f}")
+        st.latex(rf"M_{{CF}} = {FEM_0['CF']:.2f}, \quad M_{{FC}} = {FEM_0['FC']:.2f}")
+        st.latex(rf"M_{{BG}} = {FEM_0['BG']:.2f}, \quad M_{{GB}} = {FEM_0['GB']:.2f}")
+        st.latex(rf"M_{{EVol}} = {FEM_0['EVol']:.2f}, \quad M_{{FVol}} = {FEM_0['FVol']:.2f}, \quad M_{{GVol}} = {FEM_0['GVol']:.2f}")
+        
+        st.write("**Estados Impuestos (Desplazamientos Laterales \u03941, \u03942, \u03943):**")
+        st.latex(rf"\Delta_1 (\text{{Nivel 1}}): M_{{AB}} = M_{{BA}} = M_{{GH}} = M_{{HG}} = {FEM_1['AB']:.2f}")
+        st.latex(rf"\Delta_2 (\text{{Nivel 2}}): M_{{BC}} = M_{{CB}} = M_{{FG}} = M_{{GF}} = {FEM_2['BC']:.2f}")
+        st.latex(rf"\Delta_3 (\text{{Nivel 3}}): M_{{CD}} = M_{{DC}} = M_{{EF}} = M_{{FE}} = {FEM_3['CD']:.2f}")
         
         st.markdown("### Paso 4: Desglose de Tablas de Iteración (Hardy Cross)")
         df_estado0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 10, orden_miembros, "M. INICIAL")
         with st.expander("Ver Tabla Estado 0 (Cargas Reales)", expanded=True):
             st.dataframe(df_estado0.round(3))
         
-        FEM_1 = {'AB': -100, 'BA': -100, 'GH': -100, 'HG': -100}
         df_estado1, M1 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_1, 10, orden_miembros, "M. IMPUESTO (\u03941)")
         with st.expander("Ver Tabla Estado 1 (Desplazamiento Nivel 1)"):
             st.dataframe(df_estado1.round(3))
         
-        FEM_2 = {'BC': -100, 'CB': -100, 'FG': -100, 'GF': -100}
         df_estado2, M2 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_2, 10, orden_miembros, "M. IMPUESTO (\u03942)")
         with st.expander("Ver Tabla Estado 2 (Desplazamiento Nivel 2)"):
             st.dataframe(df_estado2.round(3))
         
-        FEM_3 = {'CD': -100, 'DC': -100, 'EF': -100, 'FE': -100}
         df_estado3, M3 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_3, 10, orden_miembros, "M. IMPUESTO (\u03943)")
         with st.expander("Ver Tabla Estado 3 (Desplazamiento Nivel 3)"):
             st.dataframe(df_estado3.round(3))
@@ -292,7 +299,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
         for (n1, n2), (v_izq, v_der) in V_vals.items():
             draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
             
-        # ANOTACIÓN DE REACCIONES EN LOS SOPORTES
         ax_v.annotate(f"Rx = {R_Ax:.2f}", xy=(coords['A'][0], coords['A'][1]), xytext=(coords['A'][0]-1.8, coords['A'][1]-0.8), 
                       arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
         ax_v.annotate(f"Rx = {R_Hx:.2f}", xy=(coords['H'][0], coords['H'][1]), xytext=(coords['H'][0]+1.8, coords['H'][1]-0.8), 
@@ -304,7 +310,6 @@ if ejercicio == "Ejercicio 1: 3 Niveles":
             ax.axis('off')
         st.pyplot(fig_res1, clear_figure=True)
         plt.close(fig_res1)
-
 
 # ==============================================================================
 # EJERCICIO 2
@@ -427,31 +432,4 @@ elif ejercicio == "Ejercicio 2: Columna Inclinada":
         draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['D'][0], coords['D'][1])
         for n1, n2 in [('A','B'), ('B','C'), ('C','D')]:
             v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
-            draw_diagram_member(ax_m, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.4f}", label2=f"{v2:.4f}")
-        
-        ax_v.set_title("Diagrama de Fuerza Cortante")
-        draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['D'][0], coords['D'][1])
-        V_vals = {}
-        for n1, n2, L, load in [('A','B',a,0), ('B','C',b,w), ('C','D',L_CD,0)]:
-            v_izq = load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-            v_der = -load*L/2.0 - (M_final.get(n1+n2,0) + M_final.get(n2+n1,0))/L
-            V_vals[n1+n2] = (v_izq, v_der)
-        
-        max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
-        scale_v = (b * 0.15) / max_v if max_v > 1e-4 else 1.0
-        
-        for (n1, n2), (v_izq, v_der) in V_vals.items():
-            draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.4f}", label2=f"{abs(v_der):.4f}")
-        
-        # ANOTACIÓN DE REACCIONES EN LOS SOPORTES
-        ax_v.annotate(f"Rx = {R_Ax:.2f}", xy=(coords['A'][0], coords['A'][1]), xytext=(coords['A'][0]-1.5, coords['A'][1]-0.8), 
-                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
-        ax_v.annotate(f"Rx = {R_Dx:.2f}", xy=(coords['D'][0], coords['D'][1]), xytext=(coords['D'][0]+1.5, coords['D'][1]-0.8), 
-                      arrowprops=dict(arrowstyle="->", color='blue', lw=1.5), color='blue', weight='bold', ha='center')
-        
-        for ax in (ax_v, ax_m): 
-            ax.set_xlim(-3, b+c+4); ax.set_ylim(-1.5, a+2)
-            ax.set_xticks([]); ax.set_yticks([])
-            ax.axis('off')
-        st.pyplot(fig_res2, clear_figure=True)
-        plt.close(fig_res2)
+            draw_diagram_member(
