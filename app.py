@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-st.set_page_config(page_title="Resolución Hardy Cross", layout="wide")
+st.set_page_config(page_title="Resolución Hardy Cross Completo", layout="wide")
 
 st.title("Análisis Estructural - Método de Hardy Cross Completo")
-st.markdown("Resolución iterativa incluyendo estados de desplazamiento lateral y superposición.")
+st.markdown("Resolución iterativa incluyendo estados de desplazamiento lateral, superposición y diagramas de elementos mecánicos.")
 
 # --- FUNCIÓN DE DISTRIBUCIÓN DE HARDY CROSS CORREGIDA ---
 def hardy_cross_iterations(nodos, barras, FEM, iteraciones=15):
@@ -17,7 +17,7 @@ def hardy_cross_iterations(nodos, barras, FEM, iteraciones=15):
         if f"{n1}{n2}" not in M: M[f"{n1}{n2}"] = 0.0
         if f"{n2}{n1}" not in M: M[f"{n2}{n1}"] = 0.0
         
-    # 2. Inicializar en 0 cualquier otra conexión (como los voladizos) para evitar KeyError
+    # 2. Inicializar en 0 cualquier otra conexión
     for nodo, conexiones in nodos.items():
         for vecino in conexiones.keys():
             if f"{nodo}{vecino}" not in M: 
@@ -25,24 +25,24 @@ def hardy_cross_iterations(nodos, barras, FEM, iteraciones=15):
 
     for _ in range(iteraciones):
         desequilibrios = {}
-        # 3. Calcular el momento de desequilibrio en cada nodo sumando sus uniones
+        # 3. Calcular desequilibrio
         for nodo, conexiones in nodos.items():
             desequilibrios[nodo] = sum(M[f"{nodo}{vecino}"] for vecino in conexiones.keys())
             
         M_dist = {k: 0.0 for k in M.keys()}
         
-        # 4. Distribuir momentos según factores (FD)
+        # 4. Distribuir
         for nodo, conexiones in nodos.items():
             for vecino, FD in conexiones.items():
                 M_dist[f"{nodo}{vecino}"] = -desequilibrios[nodo] * FD
                 
-        # 5. Aplicar distribuidos a los momentos actuales
+        # 5. Aplicar
         for k in M.keys():
             M[k] += M_dist[k]
             
         M_transporte = {k: 0.0 for k in M.keys()}
         
-        # 6. Transporte cruzado (Carry-over de 0.5 solo en barras físicas)
+        # 6. Transporte
         for n1, n2 in barras:
             M_transporte[f"{n2}{n1}"] += M_dist[f"{n1}{n2}"] * 0.5
             M_transporte[f"{n1}{n2}"] += M_dist[f"{n2}{n1}"] * 0.5
@@ -62,7 +62,6 @@ ejercicio = st.sidebar.radio(
 if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
     st.header("Marco con Tres Niveles y Una Crujía")
     
-    # ESQUEMA
     st.markdown("### Esquema de Referencia de Variables")
     fig_ref, ax_ref = plt.subplots(figsize=(8, 6))
     
@@ -86,30 +85,6 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
     ax_ref.text(-0.4, 8.7, 'D', fontsize=11, weight='bold')
     ax_ref.text(6.2, 8.7, 'E', fontsize=11, weight='bold')
     
-    ax_ref.text(-1.5, 1.5, 'L3 (aI)', fontsize=11)
-    ax_ref.text(-1.5, 4.5, 'L4 (bI)', fontsize=11)
-    ax_ref.text(-1.5, 7.5, 'L5 (cI)', fontsize=11)
-    ax_ref.text(6.2, 1.5, 'L3 (aI)', fontsize=11)
-    ax_ref.text(6.2, 4.5, 'L4 (bI)', fontsize=11)
-    ax_ref.text(6.2, 7.5, 'L5 (cI)', fontsize=11)
-    
-    ax_ref.text(2.5, 3.4, 'L1 (dI), w3', fontsize=11, color='darkred', weight='bold')
-    ax_ref.text(2.5, 6.4, 'L1 (dI), w2', fontsize=11, color='darkred', weight='bold')
-    ax_ref.text(2.5, 9.4, 'L1 (dI), w1', fontsize=11, color='darkred', weight='bold')
-    
-    ax_ref.text(6.8, 2.7, 'L2', fontsize=11, color='blue')
-    ax_ref.text(6.8, 5.7, 'L2', fontsize=11, color='blue')
-    ax_ref.text(6.8, 8.7, 'L2', fontsize=11, color='blue')
-    
-    ax_ref.text(-1.8, 9, 'F1 \u2192', color='red', weight='bold', fontsize=12)
-    ax_ref.text(-1.8, 6, 'F2 \u2192', color='red', weight='bold', fontsize=12)
-    ax_ref.text(-1.8, 3, 'F3 \u2192', color='red', weight='bold', fontsize=12)
-    ax_ref.text(8.1, 9.1, '\u2193 P1', color='red', weight='bold', fontsize=12)
-    ax_ref.text(8.1, 6.1, '\u2193 P2', color='red', weight='bold', fontsize=12)
-    ax_ref.text(8.1, 3.1, '\u2193 P3', color='red', weight='bold', fontsize=12)
-    
-    ax_ref.set_xlim(-2.5, 9.5)
-    ax_ref.set_ylim(-1, 10.5)
     ax_ref.axis('off')
     st.pyplot(fig_ref)
     
@@ -146,6 +121,12 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         K_CD = I_c / L5; K_EF = K_CD
         K_V = I_d / L1
         
+        st.subheader("Paso 1: Rigideces Angulares ($K = I/L$)")
+        st.latex(rf"K_{{AB}} = K_{{GH}} = {K_AB:.4f}")
+        st.latex(rf"K_{{BC}} = K_{{FG}} = {K_BC:.4f}")
+        st.latex(rf"K_{{CD}} = K_{{EF}} = {K_CD:.4f}")
+        st.latex(rf"K_{{Vigas}} = {K_V:.4f}")
+        
         # Sumatorias en los nodos
         S_B = K_AB + K_BC + K_V
         S_C = K_BC + K_CD + K_V
@@ -154,7 +135,6 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         S_F = K_BC + K_CD + K_V
         S_G = K_AB + K_BC + K_V
         
-        # Nodos corregidos: La llave interior es una SOLA LETRA del nodo vecino o 'Vol'
         nodos_fd = {
             'B': {'A': K_AB/S_B, 'C': K_BC/S_B, 'G': K_V/S_B},
             'C': {'B': K_BC/S_C, 'D': K_CD/S_C, 'F': K_V/S_C},
@@ -164,10 +144,16 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
             'G': {'B': K_V/S_G, 'F': K_BC/S_G, 'H': K_AB/S_G, 'Vol': 0.0}
         }
         
-        # Barras que sí transmiten momentos
+        st.subheader("Paso 2: Factores de Distribución ($FD$)")
+        st.markdown("**Nodo B:**")
+        st.latex(rf"FD_{{BA}}={nodos_fd['B']['A']:.4f}, \; FD_{{BC}}={nodos_fd['B']['C']:.4f}, \; FD_{{BG}}={nodos_fd['B']['G']:.4f}")
+        st.markdown("**Nodo C:**")
+        st.latex(rf"FD_{{CB}}={nodos_fd['C']['B']:.4f}, \; FD_{{CD}}={nodos_fd['C']['D']:.4f}, \; FD_{{CF}}={nodos_fd['C']['F']:.4f}")
+        st.markdown("**Nodo D:**")
+        st.latex(rf"FD_{{DC}}={nodos_fd['D']['C']:.4f}, \; FD_{{DE}}={nodos_fd['D']['E']:.4f}")
+
         barras = [('A','B'), ('B','C'), ('C','D'), ('H','G'), ('G','F'), ('F','E'), ('B','G'), ('C','F'), ('D','E')]
 
-        # FEM (Estado 0) incluyendo los voladizos calculados en la raíz del nodo
         FEM_0 = {
             'DE': -(w1*L1**2)/12, 'ED': (w1*L1**2)/12,
             'CF': -(w2*L1**2)/12, 'FC': (w2*L1**2)/12,
@@ -177,15 +163,12 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
             'GVol': -(w3*L2**2)/2 - P3*L2
         }
         
-        st.subheader("Paso 1: Estado $\Delta = 0$ (Cargas Externas)")
-        st.latex(r"\bar{M}_{DE} = " + f"{FEM_0['DE']:.4f}")
-        st.latex(r"\bar{M}_{Vol\_E} = " + f"{FEM_0['EVol']:.4f}")
+        st.subheader("Paso 3: Momentos de Empotramiento (Estado $\Delta = 0$)")
+        st.latex(r"\bar{M}_{DE} = " + f"{FEM_0['DE']:.4f} \quad \bar{M}_{Vol\_E} = " + f"{FEM_0['EVol']:.4f}")
         
         M0 = hardy_cross_iterations(nodos_fd, barras, FEM_0, 20)
         
-        st.subheader("Paso 2: Estados de Desplazamiento ($\Delta_1, \Delta_2, \Delta_3$)")
-        st.markdown("Se asumen momentos impuestos arbitrarios en las columnas de cada nivel.")
-        
+        st.subheader("Paso 4: Estados de Desplazamiento ($\Delta_1, \Delta_2, \Delta_3$)")
         FEM_1 = {'AB': -100, 'BA': -100, 'GH': -100, 'HG': -100}
         M1 = hardy_cross_iterations(nodos_fd, barras, FEM_1, 20)
         
@@ -195,62 +178,73 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
         FEM_3 = {'CD': -100, 'DC': -100, 'EF': -100, 'FE': -100}
         M3 = hardy_cross_iterations(nodos_fd, barras, FEM_3, 20)
         
-        st.subheader("Resultados Distribución de Momentos (Extremos de Barra)")
         df_M = pd.DataFrame([M0, M1, M2, M3], index=['Estado 0', 'Estado 1 (\u03941)', 'Estado 2 (\u03942)', 'Estado 3 (\u03943)']).T
         st.dataframe(df_M.style.format("{:.4f}"))
 
-        st.subheader("Paso 3: Fuerzas Cortantes y Factores de Corrección")
-        
+        st.subheader("Paso 5: Superposición y Factores de Corrección")
         def calc_cortantes(M_dict):
             V1 = -(M_dict.get('AB',0) + M_dict.get('BA',0) + M_dict.get('GH',0) + M_dict.get('HG',0)) / L3
             V2 = -(M_dict.get('BC',0) + M_dict.get('CB',0) + M_dict.get('FG',0) + M_dict.get('GF',0)) / L4
             V3 = -(M_dict.get('CD',0) + M_dict.get('DC',0) + M_dict.get('EF',0) + M_dict.get('FE',0)) / L5
             return np.array([V1, V2, V3])
 
-        V0 = calc_cortantes(M0)
-        V1 = calc_cortantes(M1)
-        V2 = calc_cortantes(M2)
-        V3 = calc_cortantes(M3)
+        V0 = calc_cortantes(M0); V1 = calc_cortantes(M1)
+        V2 = calc_cortantes(M2); V3 = calc_cortantes(M3)
         
         H_ext = np.array([F1 + F2 + F3, F1 + F2, F1])
         Matriz_V = np.column_stack((V1, V2, V3))
         Vector_F = H_ext - V0
         
-        st.latex(r"\begin{bmatrix} V1_{\Delta 1} & V1_{\Delta 2} & V1_{\Delta 3} \\ V2_{\Delta 1} & V2_{\Delta 2} & V2_{\Delta 3} \\ V3_{\Delta 1} & V3_{\Delta 2} & V3_{\Delta 3} \end{bmatrix} \begin{bmatrix} X_1 \\ X_2 \\ X_3 \end{bmatrix} = \begin{bmatrix} H_1 - V1_0 \\ H_2 - V2_0 \\ H_3 - V3_0 \end{bmatrix}")
-        
         try:
             X = np.linalg.solve(Matriz_V, Vector_F)
-            st.info(f"**Factores de corrección:**  \n$X_1 = {X[0]:.4f}$  \n$X_2 = {X[1]:.4f}$  \n$X_3 = {X[2]:.4f}$")
+            st.info(f"**Factores:** $X_1 = {X[0]:.4f}$, $X_2 = {X[1]:.4f}$, $X_3 = {X[2]:.4f}$")
             
-            st.subheader("Paso 4: Momentos Finales de Diseño")
             M_final = {k: M0[k] + X[0]*M1[k] + X[1]*M2[k] + X[2]*M3[k] for k in M0.keys()}
-            
             df_final = pd.DataFrame([M_final], index=['M Final']).T
             st.dataframe(df_final.style.format("{:.4f}"))
             
+            # --- DIAGRAMAS EX 1 ---
+            st.subheader("Paso 6: Diagramas Estructurales Aproximados")
+            fig, ax = plt.subplots(1, 2, figsize=(14, 6))
+            
+            # Dibujar Marco para ambos
+            for i in range(2):
+                ax[i].plot([0, 0], [0, L3+L4+L5], 'k-', lw=2)
+                ax[i].plot([L1, L1], [0, L3+L4+L5], 'k-', lw=2)
+                ax[i].plot([0, L1], [L3, L3], 'k-', lw=2)
+                ax[i].plot([0, L1], [L3+L4, L3+L4], 'k-', lw=2)
+                ax[i].plot([0, L1], [L3+L4+L5, L3+L4+L5], 'k-', lw=2)
+            
+            # Textos Momentos
+            ax[0].set_title("Momentos Finales en Extremos (Ton-m)")
+            ax[0].text(-0.5, 0.5, f"{M_final.get('AB',0):.1f}", color='red')
+            ax[0].text(-0.5, L3-0.5, f"{M_final.get('BA',0):.1f}", color='red')
+            ax[0].text(1, L3+0.2, f"{M_final.get('BG',0):.1f}", color='blue')
+            ax[0].text(L1-1.5, L3+0.2, f"{M_final.get('GB',0):.1f}", color='blue')
+            ax[0].text(-0.5, L3+L4+L5-0.5, f"{M_final.get('DC',0):.1f}", color='red')
+            
+            # Textos Cortantes (Aproximación por V = (Ma+Mb)/L)
+            ax[1].set_title("Cortantes por Piso (Ton)")
+            ax[1].text(-1.5, L3/2, f"V1={-(M_final.get('AB',0)+M_final.get('BA',0))/L3:.1f}", color='green')
+            ax[1].text(-1.5, L3+L4/2, f"V2={-(M_final.get('BC',0)+M_final.get('CB',0))/L4:.1f}", color='green')
+            ax[1].text(-1.5, L3+L4+L5/2, f"V3={-(M_final.get('CD',0)+M_final.get('DC',0))/L5:.1f}", color='green')
+            
+            st.pyplot(fig)
+
         except np.linalg.LinAlgError:
-            st.error("El sistema matricial es singular. Revisa las magnitudes de cargas e inercias.")
+            st.error("Error en superposición.")
 
 
 elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
     st.header("Marco con una Columna Inclinada")
     
+    st.markdown("### Esquema")
     fig_ref2, ax_ref2 = plt.subplots(figsize=(6, 4))
     ax_ref2.plot([0, 0], [0, 3], 'k-', lw=3)
     ax_ref2.plot([0, 4], [3, 3], 'b-', lw=3)
     ax_ref2.plot([4, 6], [3, 0], 'r-', lw=3)
-    
-    ax_ref2.text(-0.5, 1.5, 'a', fontsize=12)
-    ax_ref2.text(1.5, 3.2, 'b , w (carga dist.)', fontsize=12, color='blue')
-    ax_ref2.text(5.2, 1.5, 'c , $\\theta$', fontsize=12, color='red')
-    ax_ref2.text(-1.5, 3, 'F', fontsize=14, color='green', weight='bold')
-    ax_ref2.text(0, -0.3, 'A', fontsize=12)
-    ax_ref2.text(-0.3, 3, 'B', fontsize=12)
-    ax_ref2.text(4, 3.2, 'C', fontsize=12)
-    ax_ref2.text(6, -0.3, 'D', fontsize=12)
-    
-    ax_ref2.set_xlim(-2, 7)
-    ax_ref2.set_ylim(-1, 4)
+    ax_ref2.text(0, -0.3, 'A'); ax_ref2.text(-0.3, 3, 'B')
+    ax_ref2.text(4, 3.2, 'C'); ax_ref2.text(6, -0.3, 'D')
     ax_ref2.axis('off')
     st.pyplot(fig_ref2)
     
@@ -268,49 +262,74 @@ elif ejercicio == "Ejercicio 2: Marco con Columna Inclinada":
     if st.button("Resolver Ejercicio 2"):
         st.write("---")
         
+        st.subheader("Paso 1: Longitud de Columna CD")
         L_CD = proy_x / np.cos(np.radians(angulo))
+        st.latex(rf"L_{{CD}} = \frac{{{proy_x}}}{{\cos({angulo}^\circ)}} = {L_CD:.4f} \text{{ m}}")
         
+        st.subheader("Paso 2: Rigideces Angulares ($K$)")
         K_AB = I_val / h
         K_BC = I_val / viga_L
         K_CD = I_val / L_CD
+        st.latex(rf"K_{{AB}} = {K_AB:.4f} \quad K_{{BC}} = {K_BC:.4f} \quad K_{{CD}} = {K_CD:.4f}")
         
-        st.subheader("Paso 1: Momentos de Empotramiento (Estado $\Delta = 0$)")
+        st.subheader("Paso 3: Factores de Distribución ($FD$)")
+        FD_BA = K_AB/(K_AB+K_BC); FD_BC = K_BC/(K_AB+K_BC)
+        FD_CB = K_BC/(K_BC+K_CD); FD_CD = K_CD/(K_BC+K_CD)
+        st.latex(rf"FD_{{BA}} = {FD_BA:.4f} \quad FD_{{BC}} = {FD_BC:.4f}")
+        st.latex(rf"FD_{{CB}} = {FD_CB:.4f} \quad FD_{{CD}} = {FD_CD:.4f}")
+        
+        st.subheader("Paso 4: Momentos de Empotramiento (Estado $\Delta = 0$)")
         FEM_0 = {'BC': -(w_dist * viga_L**2)/12, 'CB': (w_dist * viga_L**2)/12}
         
         nodos_fd = {
-            'B': {'A': K_AB/(K_AB+K_BC), 'C': K_BC/(K_AB+K_BC)},
-            'C': {'B': K_BC/(K_BC+K_CD), 'D': K_CD/(K_BC+K_CD)}
+            'B': {'A': FD_BA, 'C': FD_BC},
+            'C': {'B': FD_CB, 'D': FD_CD}
         }
         barras = [('A','B'), ('B','C'), ('C','D')]
         
-        st.latex(rf"\bar{{M}}_{{BC}} = {FEM_0['BC']:.4f} \text{{ Ton-m}}")
-        st.latex(rf"\bar{{M}}_{{CB}} = {FEM_0['CB']:.4f} \text{{ Ton-m}}")
-        
         M0 = hardy_cross_iterations(nodos_fd, barras, FEM_0, 15)
         
-        st.subheader("Paso 2: Momentos Impuestos (Estado $\Delta \neq 0$)")
+        st.subheader("Paso 5: Momentos Impuestos (Estado $\Delta \neq 0$)")
         M_AB_imp = -10.0
         M_CD_imp = (h**2 * M_AB_imp) / (L_CD**2)
         FEM_1 = {'AB': M_AB_imp, 'BA': M_AB_imp, 'CD': M_CD_imp, 'DC': M_CD_imp}
         
-        st.latex(rf"M_{{CD}} = \frac{{h^2 \cdot M_{{AB}}}}{{CD^2}} = {M_CD_imp:.4f} \text{{ Ton-m}}")
         M1 = hardy_cross_iterations(nodos_fd, barras, FEM_1, 15)
         
-        st.subheader("Resultados Distribución de Momentos")
         df_M = pd.DataFrame([M0, M1], index=['Estado 0', 'Estado 1 (\u0394)']).T
         st.dataframe(df_M.style.format("{:.4f}"))
 
-        st.subheader("Paso 3: Equilibrio de Cortante y Momentos Finales")
-        
+        st.subheader("Paso 6: Equilibrio de Cortante y Momentos Finales")
         V0 = -(M0.get('AB',0) + M0.get('BA',0))/h - (M0.get('CD',0) + M0.get('DC',0))/h
         V1 = -(M1.get('AB',0) + M1.get('BA',0))/h - (M1.get('CD',0) + M1.get('DC',0))/h
         
         if V1 != 0:
             X = (P - V0) / V1
-            st.latex(rf"V_0 + X \cdot V_1 = F \quad \Rightarrow \quad X = {X:.5f}")
-            
+            st.latex(rf"X = {X:.5f}")
             M_final = {k: M0[k] + X*M1[k] for k in M0.keys()}
-            df_final = pd.DataFrame([M_final], index=['Momento Final (Ton-m)']).T
+            df_final = pd.DataFrame([M_final], index=['Momento Final']).T
             st.dataframe(df_final.style.format("{:.4f}"))
-        else:
-            st.error("El cortante en el Estado 1 es cero, verifica los momentos de prueba.")
+            
+            # --- DIAGRAMAS EX 2 ---
+            st.subheader("Paso 7: Diagramas Estructurales")
+            fig2, ax2 = plt.subplots(1, 2, figsize=(14, 6))
+            
+            for i in range(2):
+                ax2[i].plot([0, 0], [0, h], 'k-', lw=2)
+                ax2[i].plot([0, viga_L], [h, h], 'k-', lw=2)
+                ax2[i].plot([viga_L, viga_L+proy_x], [h, 0], 'k-', lw=2)
+                
+            ax2[0].set_title("Momentos Finales en Extremos (Ton-m)")
+            ax2[0].text(-0.8, 0.5, f"{M_final.get('AB',0):.2f}", color='red')
+            ax2[0].text(-0.8, h-0.5, f"{M_final.get('BA',0):.2f}", color='red')
+            ax2[0].text(0.5, h+0.2, f"{M_final.get('BC',0):.2f}", color='blue')
+            ax2[0].text(viga_L-1.5, h+0.2, f"{M_final.get('CB',0):.2f}", color='blue')
+            ax2[0].text(viga_L+0.5, h-0.5, f"{M_final.get('CD',0):.2f}", color='purple')
+            
+            ax2[1].set_title("Cortantes de Columna (Ton)")
+            V_AB = -(M_final.get('AB',0) + M_final.get('BA',0)) / h
+            V_CD = -(M_final.get('CD',0) + M_final.get('DC',0)) / L_CD
+            ax2[1].text(-1.5, h/2, f"V_AB={V_AB:.2f}", color='green')
+            ax2[1].text(viga_L+proy_x/2 + 0.5, h/2, f"V_CD={V_CD:.2f}", color='green')
+
+            st.pyplot(fig2)
