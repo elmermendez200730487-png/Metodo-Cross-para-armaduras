@@ -127,4 +127,4 @@ if ejercicio == "Ejercicio 1: Marco de 3 Niveles":
     with col1:
         L1 = st.number_input(f"Longitud viga L1 ({u_long})", value=5.0)
         L2 = st.number_input(f"Voladizo L2 ({u_long})", value=1.5)
-        L3 = st.number_input(f"Altura N1 L3 ({u_long})", value=4.
+        L3 = st.number_input(f"Altura N1 L3 ({u_long})", value=4.0)
