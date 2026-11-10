@@ -191,6 +191,204 @@ if tipo_ejercicio == "Ejercicio 1: Marco Ortogonal Dinámico":
         with colC2: cargas_P.append(st.number_input(f"Puntual en voladizo (P{i})", value=2.0 if vol_activos[i] else 0.0, disabled=not vol_activos[i], key=f"p{i}", on_change=reset_state))
         with colC3: cargas_F.append(st.number_input(f"Fuerza Horizontal (F{i})", value=8.0 if i==3 else (6.0 if i==2 else 4.0), key=f"f{i}", on_change=reset_state))
 
+    Aquí tienes el código con la actualización solicitada. He agregado las **cotas de dimensión (líneas y textos verdes)** en la gráfica inicial del Ejercicio 2 para mostrar claramente la altura de la columna AB ($h_{AB}$), la longitud de la viga BC ($L_{BC}$), la base de la columna inclinada y la altura resultante de la columna inclinada CD ($h_{CD}$). También he ajustado los márgenes (límites de la gráfica) para que las cotas entren perfectamente.
+
+Copia este bloque y reemplaza todo el contenido en tu archivo `app.py`:
+
+```python
+import sys
+sys.setrecursionlimit(5000)
+
+import matplotlib
+matplotlib.use('Agg')
+
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import pandas as pd
+import math
+
+st.set_page_config(page_title="Hardy Cross - Marcos", layout="wide")
+
+def reset_state():
+    st.session_state.resuelto = False
+
+if 'resuelto' not in st.session_state:
+    st.session_state.resuelto = False
+
+# ==========================================
+# FUNCIONES DE DIBUJO DE DIAGRAMAS
+# ==========================================
+def draw_support(ax, x, y, nx=0, ny=-1, is_pin=False):
+    if is_pin:
+        ax.plot([x-0.3, x+0.3], [y-0.4, y-0.4], 'k-', lw=2)
+        ax.plot([x, x-0.3, x+0.3, x], [y, y-0.4, y-0.4, y], 'k-', lw=1.5)
+    else:
+        hx, hy = [], []
+        ax.plot([x-0.4, x+0.4], [y, y], 'k-', lw=2)
+        for i in np.linspace(-0.4, 0.3, 6):
+            hx.extend([x+i, x+i+0.1, np.nan])
+            hy.extend([y, y-0.2, np.nan])
+        if hx: ax.plot(hx, hy, 'k-', lw=1)
+
+def draw_distributed_load(ax, x1, x2, y, label, is_vertical=True):
+    if is_vertical:
+        ax.plot([x1, x2], [y+0.5, y+0.5], 'r-', lw=1)
+        for px in np.linspace(x1, x2, int((x2-x1)*3)+2):
+            ax.annotate('', xy=(px, y), xytext=(px, y+0.5), arrowprops=dict(arrowstyle='->', color='red', lw=1))
+        ax.text((x1+x2)/2, y+0.7, label, color='red', ha='center', weight='bold')
+
+def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1="", label2="", draw_member=True):
+    dx, dy = x2 - x1, y2 - y1
+    L = math.hypot(dx, dy)
+    if L == 0: return
+    nx, ny = -dy/L, dx/L
+    
+    px1, py1 = x1 + v1 * scale * nx, y1 + v1 * scale * ny
+    px2, py2 = x2 + v2 * scale * nx, y2 + v2 * scale * ny
+    
+    if draw_member: ax.plot([x1, x2], [y1, y2], 'k-', lw=2.5)
+    ax.plot([x1, px1, px2, x2], [y1, py1, py2, y2], color=color, lw=1.2)
+    ax.fill_between([x1, x2], [y1, y2], [py1, py2], color=color, alpha=0.2)
+        
+    if abs(v1) > 0.001: ax.text(px1 + 0.4*nx, py1 + 0.4*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
+    if abs(v2) > 0.001: ax.text(px2 + 0.4*nx, py2 + 0.4*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
+
+def tabla_cross_paso_a_paso(nodos_fd, barras, FEM, iteraciones, orden_miembros, nombre_m_inicial):
+    columnas_tuplas = [(m[0], m) for m in orden_miembros]
+    columnas = pd.MultiIndex.from_tuples(columnas_tuplas, names=['NODO', 'MIEMBRO'])
+    
+    fd_row = []
+    for m in orden_miembros:
+        n1, n2 = m[0], m[1:]
+        if len(m) > 2 and 'Vol' in m: fd_row.append(0.0)
+        else: fd_row.append(nodos_fd.get(n1, {}).get(n2, 0.0))
+            
+    m_row = [FEM.get(m, 0.0) for m in orden_miembros]
+    filas = [fd_row, m_row]
+    nombres_filas = ['F.D.', nombre_m_inicial]
+    
+    M_actual = {m: FEM.get(m, 0.0) for m in orden_miembros}
+    
+    for i in range(1, iteraciones + 1):
+        desequilibrios = {n: 0.0 for n in nodos_fd.keys()}
+        for m in orden_miembros:
+            if m[0] in desequilibrios: desequilibrios[m[0]] += M_actual[m]
+                
+        dist_row_dict = {}
+        for m in orden_miembros:
+            n1, n2 = m[0], m[1:]
+            if n1 in nodos_fd and n2 in nodos_fd[n1]:
+                dist = -desequilibrios[n1] * nodos_fd[n1][n2]
+                dist_row_dict[m] = dist
+                M_actual[m] += dist
+            else: dist_row_dict[m] = 0.0
+                
+        filas.append([dist_row_dict[m] for m in orden_miembros])
+        nombres_filas.append(f"{i}a. Dist.")
+        
+        trans_row_dict = {m: 0.0 for m in orden_miembros}
+        for n1, n2 in barras:
+            m_ida, m_vuelta = f"{n1}{n2}", f"{n2}{n1}"
+            if m_ida in orden_miembros and m_vuelta in orden_miembros:
+                trans_row_dict[m_ida] += dist_row_dict.get(m_vuelta, 0.0) * 0.5
+                trans_row_dict[m_vuelta] += dist_row_dict.get(m_ida, 0.0) * 0.5
+                M_actual[m_ida] += trans_row_dict[m_ida]
+                M_actual[m_vuelta] += trans_row_dict[m_vuelta]
+                
+        filas.append([trans_row_dict[m] for m in orden_miembros])
+        nombres_filas.append(f"{i}o. Transp.")
+        
+    filas.append([M_actual[m] for m in orden_miembros])
+    nombres_filas.append('Momentos Finales')
+    return pd.DataFrame(filas, index=nombres_filas, columns=columnas), M_actual
+
+st.title("Análisis Estructural - Método de Hardy Cross")
+
+st.sidebar.header("Tipo de Ejercicio")
+tipo_ejercicio = st.sidebar.radio("Selecciona el modelo:", ["Ejercicio 1: Marco Ortogonal Dinámico", "Ejercicio 2: Marco Inclinado"], on_change=reset_state)
+
+st.sidebar.header("Unidades")
+u_fuerza = st.sidebar.selectbox("Fuerza", ["ton", "N", "lb", "kN"])
+u_long = st.sidebar.selectbox("Longitud", ["m", "ft", "in"])
+
+# ==============================================================================
+# EJERCICIO 1: MARCO ORTOGONAL DINÁMICO
+# ==============================================================================
+if tipo_ejercicio == "Ejercicio 1: Marco Ortogonal Dinámico":
+    num_niveles = st.sidebar.radio("Número de niveles:", (1, 2, 3), index=2, on_change=reset_state)
+    
+    st.sidebar.subheader("Voladizos Activos (Derecha)")
+    vol_activos = {}
+    for i in range(1, num_niveles + 1):
+        vol_activos[i] = st.sidebar.checkbox(f"Voladizo en Nivel {i}", value=True, on_change=reset_state)
+
+    st.header(f"Marco de {num_niveles} Nivel(es)")
+
+    fig_ref, ax_ref = plt.subplots(figsize=(8, 7))
+    ax_ref.plot([0, 0], [0, num_niveles*3], 'b-', lw=2)
+    ax_ref.plot([5, 5], [0, num_niveles*3], 'b-', lw=2)
+
+    draw_support(ax_ref, 0, 0); draw_support(ax_ref, 5, 0)
+    ax_ref.text(-0.3, 0, 'A', weight='bold'); ax_ref.text(5.2, 0, 'H', weight='bold')
+
+    for i in range(1, num_niveles + 1):
+        y = i * 3
+        ax_ref.plot([0, 5], [y, y], 'b-', lw=2)
+        ax_ref.text(2.5, y - 0.3, 'L', color='black', ha='center', style='italic')
+        ax_ref.text(2.5, y + 0.2, 'Iv', color='blue', ha='center', style='italic', weight='bold')
+        
+        ax_ref.annotate('', xy=(-0.8, y-3), xytext=(-0.8, y), arrowprops=dict(arrowstyle='<->', color='green'))
+        ax_ref.text(-1.0, y - 1.5, f'H{i}', color='green', ha='right', va='center', weight='bold')
+        ax_ref.text(-0.2, y - 1.5, f'Ic{i}', color='blue', ha='right', va='center', style='italic', weight='bold')
+        ax_ref.text(5.2, y - 1.5, f'Ic{i}', color='blue', ha='left', va='center', style='italic', weight='bold')
+        
+        draw_distributed_load(ax_ref, 0, 5, y, f"w{i}")
+        ax_ref.annotate('', xy=(0, y), xytext=(-1.5, y), arrowprops=dict(arrowstyle='->', color='purple', lw=2))
+        ax_ref.text(-1.7, y, f'F{i}', color='purple', ha='right', va='center', weight='bold')
+
+        if vol_activos[i]:
+            ax_ref.plot([5, 7], [y, y], 'b-', lw=2) 
+            ax_ref.annotate('', xy=(7, y+1), xytext=(7, y), arrowprops=dict(arrowstyle='<-', color='orange', lw=2))
+            ax_ref.text(7, y+1.2, f'P{i}', color='orange', ha='center', weight='bold')
+            ax_ref.text(6, y - 0.3, f'Lvol_{i}', color='black', ha='center', style='italic')
+            
+        if i == 1:
+            ax_ref.text(-0.3, y, 'B', weight='bold'); ax_ref.text(4.7, y, 'G', weight='bold')
+        elif i == 2:
+            ax_ref.text(-0.3, y, 'C', weight='bold'); ax_ref.text(4.7, y, 'F', weight='bold')
+        elif i == 3:
+            ax_ref.text(-0.3, y, 'D', weight='bold'); ax_ref.text(4.7, y, 'E', weight='bold')
+
+    ax_ref.set_xlim(-3, 9); ax_ref.set_ylim(-1.5, num_niveles*3 + 2.5); ax_ref.axis('off')
+    st.pyplot(fig_ref, clear_figure=True)
+    plt.close(fig_ref)
+
+    st.subheader("Geometría e Inercia")
+    colG1, colG2 = st.columns(2)
+    with colG1:
+        L_viga = st.number_input("Long. Viga Central (L)", value=5.0, on_change=reset_state)
+        coef_viga = st.number_input("Inercia Vigas (Iv)", value=1.0, on_change=reset_state)
+    with colG2:
+        H_niveles = []; coef_cols = []; L_vols = {}
+        for i in range(1, num_niveles + 1):
+            H_niveles.append(st.number_input(f"Altura Nivel {i} (H{i})", value=3.0, key=f"H{i}", on_change=reset_state))
+            coef_cols.append(st.number_input(f"Inercia Col Nivel {i} (Ic{i})", value=4.0 if i==1 else (3.0 if i==2 else 2.0), key=f"I{i}", on_change=reset_state))
+            if vol_activos[i]:
+                L_vols[i] = st.number_input(f"Long. Voladizo Nivel {i} (Lvol_{i})", value=1.5, key=f"Lvol{i}", on_change=reset_state)
+            else:
+                L_vols[i] = 0.0
+
+    st.subheader("Cargas (0 para anular)")
+    cargas_W = []; cargas_P = []; cargas_F = []
+    for i in range(1, num_niveles + 1):
+        st.markdown(f"**Nivel {i}:**")
+        colC1, colC2, colC3 = st.columns(3)
+        with colC1: cargas_W.append(st.number_input(f"Distribuida (w{i})", value=2.0, key=f"w{i}", on_change=reset_state))
+        with colC2: cargas_P.append(st.number_input(f"Puntual en voladizo (P{i})", value=2.0 if vol_activos[i] else 0.0, disabled=not vol_activos[i], key=f"p{i}", on_change=reset_state))
+        with colC3: cargas_F.append(st.number_input(f"Fuerza Horizontal (F{i})", value=8.0 if i==3 else (6.0 if i==2 else 4.0), key=f"f{i}", on_change=reset_state))
+
     if st.button("Resolver Ejercicio 1"):
         st.session_state.resuelto = True
 
@@ -402,7 +600,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
     y_d = h_ab - h_cd  # Elevación (y) del apoyo D respecto al apoyo A
     
     # Dibujar marco dinámico
-    fig_ref, ax_ref = plt.subplots(figsize=(8, 5))
+    fig_ref, ax_ref = plt.subplots(figsize=(9, 6))
     ax_ref.plot([0, 0], [0, h_ab], 'b-', lw=2) # Columna AB
     ax_ref.plot([0, l_bc], [h_ab, h_ab], 'b-', lw=2) # Viga BC
     ax_ref.plot([l_bc, l_bc + base_d], [h_ab, y_d], 'b-', lw=2) # Pata inclinada CD
@@ -412,8 +610,8 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
     draw_support(ax_ref, l_bc + base_d, y_d, is_pin=False)
     
     # Etiquetas de Nodos e Inercias
-    ax_ref.text(-0.4, 0, 'A', weight='bold')
-    ax_ref.text(-0.4, h_ab + 0.2, 'B', weight='bold')
+    ax_ref.text(-0.3, -0.2, 'A', weight='bold')
+    ax_ref.text(-0.3, h_ab + 0.2, 'B', weight='bold')
     ax_ref.text(l_bc + 0.2, h_ab + 0.2, 'C', weight='bold')
     ax_ref.text(l_bc + base_d + 0.3, y_d, 'D', weight='bold')
     
@@ -421,12 +619,32 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
     ax_ref.text(l_bc/2, h_ab + 0.2, f'I={i_bc}', color='teal', weight='bold')
     ax_ref.text(l_bc + base_d/2 + 0.3, h_ab - h_cd/2, f'I={i_cd}', color='teal', weight='bold')
     
-    # Acotación de la base CD
+    # === COTAS AÑADIDAS AQUÍ ===
+    
+    # Cota h_AB (Izquierda)
+    ax_ref.annotate('', xy=(-1.5, 0), xytext=(-1.5, h_ab), arrowprops=dict(arrowstyle='<->', color='green'))
+    ax_ref.text(-1.7, h_ab/2, f'h_AB = {h_ab:.2f}', color='green', ha='right', va='center', rotation=90, weight='bold')
+    ax_ref.plot([-0.2, -1.8], [0, 0], 'k--', lw=1, alpha=0.3)
+    ax_ref.plot([-0.2, -1.8], [h_ab, h_ab], 'k--', lw=1, alpha=0.3)
+    
+    # Cota L_BC (Arriba)
+    ax_ref.annotate('', xy=(0, h_ab + 1.5), xytext=(l_bc, h_ab + 1.5), arrowprops=dict(arrowstyle='<->', color='green'))
+    ax_ref.text(l_bc/2, h_ab + 1.7, f'L_BC = {l_bc:.2f}', color='green', ha='center', weight='bold')
+    ax_ref.plot([0, 0], [h_ab+0.2, h_ab+1.8], 'k--', lw=1, alpha=0.3)
+    ax_ref.plot([l_bc, l_bc], [h_ab+0.2, h_ab+1.8], 'k--', lw=1, alpha=0.3)
+
+    # Cota base_d (Base Abajo CD)
     ax_ref.annotate('', xy=(l_bc, y_d - 0.6), xytext=(l_bc + base_d, y_d - 0.6), arrowprops=dict(arrowstyle='<->', color='green'))
-    ax_ref.text(l_bc + base_d/2, y_d - 1.0, f'L base = {base_d:.2f}', color='green', ha='center', weight='bold')
+    ax_ref.text(l_bc + base_d/2, y_d - 1.0, f'Base = {base_d:.2f}', color='green', ha='center', weight='bold')
     ax_ref.plot([l_bc, l_bc], [h_ab, y_d - 0.8], 'k--', lw=1, alpha=0.3)
     ax_ref.plot([l_bc + base_d, l_bc + base_d], [y_d, y_d - 0.8], 'k--', lw=1, alpha=0.3)
     
+    # Cota h_CD (Derecha vertical)
+    ax_ref.annotate('', xy=(l_bc + base_d + 1.3, h_ab), xytext=(l_bc + base_d + 1.3, y_d), arrowprops=dict(arrowstyle='<->', color='green'))
+    ax_ref.text(l_bc + base_d + 1.5, (h_ab + y_d)/2, f'h_CD = {h_cd:.2f}', color='green', ha='left', va='center', rotation=270, weight='bold')
+    ax_ref.plot([l_bc, l_bc + base_d + 1.6], [h_ab, h_ab], 'k--', lw=1, alpha=0.3)
+    ax_ref.plot([l_bc + base_d, l_bc + base_d + 1.6], [y_d, y_d], 'k--', lw=1, alpha=0.3)
+
     # Dibujar el arco del ángulo
     radio_arco = min(h_cd, base_d) * 0.4
     arc = patches.Arc((l_bc + base_d, y_d), radio_arco*2, radio_arco*2, angle=0, theta1=180-angulo_d, theta2=180, color='green', lw=2)
@@ -440,8 +658,8 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         ax_ref.text(-1.7, h_ab, f'P={P}', color='purple', ha='right', va='center', weight='bold')
     
     y_min_plot = min(0, y_d) - 1.5
-    y_max_plot = max(h_ab, y_d) + 2
-    ax_ref.set_xlim(-2.5, l_bc + base_d + 2); ax_ref.set_ylim(y_min_plot, y_max_plot); ax_ref.axis('off')
+    y_max_plot = max(h_ab, y_d) + 2.5
+    ax_ref.set_xlim(-2.5, l_bc + base_d + 2.5); ax_ref.set_ylim(y_min_plot, y_max_plot); ax_ref.axis('off')
     st.pyplot(fig_ref, clear_figure=True); plt.close(fig_ref)
         
     if st.button("Resolver Ejercicio 2"):
@@ -550,5 +768,5 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
             n1, n2 = mem[0], mem[1]
             draw_diagram_member(ax_v2, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{v_der:.2f}")
 
-        for ax in (ax_v2, ax_m2): ax.set_xlim(-2, l_bc + base_d + 2); ax.set_ylim(y_min_plot, y_max_plot); ax.set_xticks([]); ax.set_yticks([]); ax.axis('off')
+        for ax in (ax_v2, ax_m2): ax.set_xlim(-2, l_bc + base_d + 2.5); ax.set_ylim(y_min_plot, y_max_plot); ax.set_xticks([]); ax.set_yticks([]); ax.axis('off')
         st.pyplot(fig_res2, clear_figure=True); plt.close(fig_res2)
