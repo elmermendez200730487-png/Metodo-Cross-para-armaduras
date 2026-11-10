@@ -114,7 +114,6 @@ tipo_ejercicio = st.sidebar.radio("Selecciona el modelo:", ["Ejercicio 1: Marco 
 st.sidebar.header("Unidades")
 u_fuerza = st.sidebar.selectbox("Fuerza", ["ton", "N", "lb", "kN"])
 u_long = st.sidebar.selectbox("Longitud", ["m", "ft", "in"])
-u_ang = st.sidebar.selectbox("Unidad de Ángulo", ["Grados", "Radianes"])
 
 # ==============================================================================
 # EJERCICIO 1: MARCO ORTOGONAL DINÁMICO
@@ -130,8 +129,8 @@ if tipo_ejercicio == "Ejercicio 1: Marco Ortogonal Dinámico":
     st.header(f"Marco de {num_niveles} Nivel(es)")
 
     fig_ref, ax_ref = plt.subplots(figsize=(8, 7))
-    ax_ref.plot([0, 0], [0, num_niveles*3], 'b-', lw=2)  # Columna Izquierda
-    ax_ref.plot([5, 5], [0, num_niveles*3], 'b-', lw=2)  # Columna Derecha
+    ax_ref.plot([0, 0], [0, num_niveles*3], 'b-', lw=2)
+    ax_ref.plot([5, 5], [0, num_niveles*3], 'b-', lw=2)
 
     draw_support(ax_ref, 0, 0); draw_support(ax_ref, 5, 0)
     ax_ref.text(-0.3, 0, 'A', weight='bold'); ax_ref.text(5.2, 0, 'H', weight='bold')
@@ -379,14 +378,23 @@ if tipo_ejercicio == "Ejercicio 1: Marco Ortogonal Dinámico":
 # EJERCICIO 2: MARCO INCLINADO INTERACTIVO
 # ==============================================================================
 elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
-    st.header("Marco con Pata Inclinada (Interactivo)")
+    st.header("Marco con Pata Inclinada Asimétrica")
     
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Geometría y Cargas")
         h_ab = st.number_input("Altura Columna AB", value=4.0, on_change=reset_state)
         l_bc = st.number_input("Longitud Viga BC", value=5.0, on_change=reset_state)
-        angulo_d = st.number_input("Ángulo de inclinación CD (grados)", value=55.0, min_value=10.0, max_value=85.0, on_change=reset_state)
+        h_cd = st.number_input("Altura Columna CD (Vertical)", value=4.0, on_change=reset_state)
+        
+        tipo_cd = st.radio("Definir inclinación CD mediante:", ["Ángulo", "Distancia Horizontal Base"])
+        if tipo_cd == "Ángulo":
+            angulo_d = st.number_input("Ángulo de inclinación CD (grados)", value=55.0, min_value=10.0, max_value=85.0, on_change=reset_state)
+            base_d = h_cd / math.tan(math.radians(angulo_d))
+        else:
+            base_d = st.number_input("Distancia horizontal CD (Base)", value=2.8, min_value=0.1, on_change=reset_state)
+            angulo_d = math.degrees(math.atan(h_cd / base_d))
+            
         w = st.number_input(f"Carga distribuida w en BC ({u_fuerza}/{u_long})", value=12.0, on_change=reset_state)
         P = st.number_input(f"Carga horizontal P en Nodo B ({u_fuerza})", value=20.0, on_change=reset_state)
     with col2:
@@ -395,41 +403,41 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         i_bc = st.number_input("I de BC", value=2.0, on_change=reset_state)
         i_cd = st.number_input("I de CD", value=1.0, on_change=reset_state)
 
-    # Cálculos derivados del ángulo dinámico
-    theta_rad = math.radians(angulo_d)
-    base_d = h_ab / math.tan(theta_rad)
-    L_cd = math.hypot(base_d, h_ab)
+    # Cálculos derivados
+    L_cd = math.hypot(base_d, h_cd)
+    y_d = h_ab - h_cd  # Elevación (y) del apoyo D respecto al apoyo A
     
     # Dibujar marco dinámico
     fig_ref, ax_ref = plt.subplots(figsize=(8, 5))
     ax_ref.plot([0, 0], [0, h_ab], 'b-', lw=2) # Columna AB
     ax_ref.plot([0, l_bc], [h_ab, h_ab], 'b-', lw=2) # Viga BC
-    ax_ref.plot([l_bc, l_bc + base_d], [h_ab, 0], 'b-', lw=2) # Pata inclinada CD
+    ax_ref.plot([l_bc, l_bc + base_d], [h_ab, y_d], 'b-', lw=2) # Pata inclinada CD
     
     # Soportes fijos
     draw_support(ax_ref, 0, 0, is_pin=False)
-    draw_support(ax_ref, l_bc + base_d, 0, is_pin=False)
+    draw_support(ax_ref, l_bc + base_d, y_d, is_pin=False)
     
     # Etiquetas de Nodos e Inercias
     ax_ref.text(-0.4, 0, 'A', weight='bold')
     ax_ref.text(-0.4, h_ab + 0.2, 'B', weight='bold')
     ax_ref.text(l_bc + 0.2, h_ab + 0.2, 'C', weight='bold')
-    ax_ref.text(l_bc + base_d + 0.3, 0, 'D', weight='bold')
+    ax_ref.text(l_bc + base_d + 0.3, y_d, 'D', weight='bold')
     
     ax_ref.text(0.2, h_ab/2, f'I={i_ab}', color='teal', weight='bold')
     ax_ref.text(l_bc/2, h_ab + 0.2, f'I={i_bc}', color='teal', weight='bold')
-    ax_ref.text(l_bc + base_d/2 + 0.3, h_ab/2, f'I={i_cd}', color='teal', weight='bold')
+    ax_ref.text(l_bc + base_d/2 + 0.3, h_ab - h_cd/2, f'I={i_cd}', color='teal', weight='bold')
     
-    # Acotación y Ángulo visual dinámico
-    ax_ref.annotate('', xy=(l_bc, -0.6), xytext=(l_bc + base_d, -0.6), arrowprops=dict(arrowstyle='<->', color='green'))
-    ax_ref.text(l_bc + base_d/2, -1.0, f'L base = {base_d:.2f}', color='green', ha='center', weight='bold')
-    ax_ref.plot([l_bc, l_bc], [h_ab, -0.8], 'k--', lw=1, alpha=0.3)
-    ax_ref.plot([l_bc + base_d, l_bc + base_d], [0, -0.8], 'k--', lw=1, alpha=0.3)
+    # Acotación de la base CD
+    ax_ref.annotate('', xy=(l_bc, y_d - 0.6), xytext=(l_bc + base_d, y_d - 0.6), arrowprops=dict(arrowstyle='<->', color='green'))
+    ax_ref.text(l_bc + base_d/2, y_d - 1.0, f'L base = {base_d:.2f}', color='green', ha='center', weight='bold')
+    ax_ref.plot([l_bc, l_bc], [h_ab, y_d - 0.8], 'k--', lw=1, alpha=0.3)
+    ax_ref.plot([l_bc + base_d, l_bc + base_d], [y_d, y_d - 0.8], 'k--', lw=1, alpha=0.3)
     
     # Dibujar el arco del ángulo
-    arc = patches.Arc((l_bc + base_d, 0), h_ab*0.5, h_ab*0.5, angle=0, theta1=180-angulo_d, theta2=180, color='green', lw=2)
+    radio_arco = min(h_cd, base_d) * 0.4
+    arc = patches.Arc((l_bc + base_d, y_d), radio_arco*2, radio_arco*2, angle=0, theta1=180-angulo_d, theta2=180, color='green', lw=2)
     ax_ref.add_patch(arc)
-    ax_ref.text(l_bc + base_d - h_ab*0.35, 0.2, f"{angulo_d}°", color='green', weight='bold')
+    ax_ref.text(l_bc + base_d - radio_arco - 0.2, y_d + 0.2, f"{angulo_d:.1f}°", color='green', weight='bold')
 
     if w > 0:
         draw_distributed_load(ax_ref, 0, l_bc, h_ab, f"w={w}")
@@ -437,7 +445,9 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         ax_ref.annotate('', xy=(0, h_ab), xytext=(-1.5, h_ab), arrowprops=dict(arrowstyle='->', color='purple', lw=2))
         ax_ref.text(-1.7, h_ab, f'P={P}', color='purple', ha='right', va='center', weight='bold')
     
-    ax_ref.set_xlim(-2.5, l_bc + base_d + 2); ax_ref.set_ylim(-1.5, h_ab + 2); ax_ref.axis('off')
+    y_min_plot = min(0, y_d) - 1.5
+    y_max_plot = max(h_ab, y_d) + 2
+    ax_ref.set_xlim(-2.5, l_bc + base_d + 2); ax_ref.set_ylim(y_min_plot, y_max_plot); ax_ref.axis('off')
     st.pyplot(fig_ref, clear_figure=True); plt.close(fig_ref)
         
     if st.button("Resolver Ejercicio 2"):
@@ -459,13 +469,12 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         st.latex(rf"FEM_{{BC}} = -\frac{{w L^2}}{{12}} = {fem_bc:.2f}, \quad FEM_{{AB}} = 0 \text{{ (Carga en nodo)}}")
         
         st.markdown("### Paso 3: Análisis de Ladeo (Sway)")
-        delta_ab = 1.0
-        delta_cd = delta_ab * (h_ab / base_d) 
         fem_sway_ab = -100.0
-        fem_sway_cd = fem_sway_ab * (i_cd / i_ab) * (h_ab / L_cd)**2 * (delta_cd / delta_ab)
+        # Relación de momentos por deformación relativa tomando en cuenta h_cd y h_ab variables
+        fem_sway_cd = fem_sway_ab * (i_cd / i_ab) * (h_cd * h_ab**2) / (L_cd**3)
         FEM_Sway = {'AB': fem_sway_ab, 'BA': fem_sway_ab, 'BC': 0.0, 'CB': 0.0, 'CD': fem_sway_cd, 'DC': fem_sway_cd}
         
-        st.latex(rf"M'_{{AB}} = {fem_sway_ab:.1f}, \quad M'_{{CD}} = M'_{{AB}} \left(\frac{{I_{{CD}}}}{{I_{{AB}}}}\right) \left(\frac{{h_{{AB}}^3}}{{L_{{CD}}^3}}\right) = {fem_sway_cd:.1f}")
+        st.latex(rf"M'_{{AB}} = {fem_sway_ab:.1f}, \quad M'_{{CD}} = M'_{{AB}} \left(\frac{{I_{{CD}}}}{{I_{{AB}}}}\right) \left(\frac{{h_{{CD}} h_{{AB}}^2}}{{L_{{CD}}^3}}\right) = {fem_sway_cd:.1f}")
 
         st.markdown("### Paso 4: Tablas de Hardy Cross")
         nodos_fd = {'A': {'B': 0}, 'B': {'A': fd_ba, 'C': fd_bc}, 'C': {'B': fd_cb, 'D': fd_cd}, 'D': {'C': 0}}
@@ -480,7 +489,8 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
 
         st.markdown("### Paso 5: Ecuación de Cortante Virtual y Momentos Finales")
         def calc_v_eq(M):
-            return -((M.get('AB',0) + M.get('BA',0))/h_ab + (M.get('CD',0) + M.get('DC',0)) * h_ab / L_cd**2)
+            # La ecuación de trabajo virtual ajustada para alturas asimétricas h_ab y h_cd
+            return -((M.get('AB',0) + M.get('BA',0))/h_ab + (M.get('CD',0) + M.get('DC',0)) * h_cd / L_cd**2)
 
         v_eq_0 = calc_v_eq(M0)
         v_eq_sway = calc_v_eq(Msway)
@@ -511,7 +521,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
 
         st.markdown("### Paso 7: Diagramas de Cortante y Momento")
         fig_res2, (ax_v2, ax_m2) = plt.subplots(1, 2, figsize=(14, 5))
-        coords = {'A': (0,0), 'B': (0, h_ab), 'C': (l_bc, h_ab), 'D': (l_bc + base_d, 0)}
+        coords = {'A': (0,0), 'B': (0, h_ab), 'C': (l_bc, h_ab), 'D': (l_bc + base_d, y_d)}
         
         max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
         scale_m = (l_bc * 0.15) / max_m if max_m > 1e-4 else 1.0
@@ -541,5 +551,5 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
             n1, n2 = mem[0], mem[1]
             draw_diagram_member(ax_v2, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{v_der:.2f}")
 
-        for ax in (ax_v2, ax_m2): ax.set_xlim(-2, l_bc + base_d + 2); ax.set_ylim(-1, h_ab + 2); ax.set_xticks([]); ax.set_yticks([]); ax.axis('off')
+        for ax in (ax_v2, ax_m2): ax.set_xlim(-2, l_bc + base_d + 2); ax.set_ylim(y_min_plot, y_max_plot); ax.set_xticks([]); ax.set_yticks([]); ax.axis('off')
         st.pyplot(fig_res2, clear_figure=True); plt.close(fig_res2)
