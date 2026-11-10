@@ -378,7 +378,7 @@ if tipo_ejercicio == "Ejercicio 1: Marco Ortogonal Dinámico":
 # EJERCICIO 2: MARCO INCLINADO INTERACTIVO
 # ==============================================================================
 elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
-    st.header("Marco con Pata Inclinada Asimétrica")
+    st.header("Marco Inclinado variable")
     
     col1, col2 = st.columns(2)
     with col1:
