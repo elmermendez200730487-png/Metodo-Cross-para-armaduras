@@ -383,18 +383,10 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Geometría y Cargas")
-        h_ab = st.number_input("Altura Columna AB", value=4.0, on_change=reset_state)
-        l_bc = st.number_input("Longitud Viga BC", value=5.0, on_change=reset_state)
-        h_cd = st.number_input("Altura Columna CD (Vertical)", value=4.0, on_change=reset_state)
-        
-        tipo_cd = st.radio("Definir inclinación CD mediante:", ["Ángulo", "Distancia Horizontal Base"])
-        if tipo_cd == "Ángulo":
-            angulo_d = st.number_input("Ángulo de inclinación CD (grados)", value=55.0, min_value=10.0, max_value=85.0, on_change=reset_state)
-            base_d = h_cd / math.tan(math.radians(angulo_d))
-        else:
-            base_d = st.number_input("Distancia horizontal CD (Base)", value=2.8, min_value=0.1, on_change=reset_state)
-            angulo_d = math.degrees(math.atan(h_cd / base_d))
-            
+        h_ab = st.number_input(f"Altura Columna AB ({u_long})", value=4.0, on_change=reset_state)
+        l_bc = st.number_input(f"Longitud Viga BC ({u_long})", value=5.0, on_change=reset_state)
+        base_d = st.number_input(f"Distancia horizontal C a D ({u_long})", value=2.8, min_value=0.1, on_change=reset_state)
+        angulo_d = st.number_input("Ángulo de elevación CD (grados)", value=55.0, min_value=10.0, max_value=89.0, on_change=reset_state)
         w = st.number_input(f"Carga distribuida w en BC ({u_fuerza}/{u_long})", value=12.0, on_change=reset_state)
         P = st.number_input(f"Carga horizontal P en Nodo B ({u_fuerza})", value=20.0, on_change=reset_state)
     with col2:
@@ -403,8 +395,10 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         i_bc = st.number_input("I de BC", value=2.0, on_change=reset_state)
         i_cd = st.number_input("I de CD", value=1.0, on_change=reset_state)
 
-    # Cálculos derivados
-    L_cd = math.hypot(base_d, h_cd)
+    # Cálculos derivados en base al ángulo y la base horizontal
+    theta_rad = math.radians(angulo_d)
+    h_cd = base_d * math.tan(theta_rad)
+    L_cd = base_d / math.cos(theta_rad)
     y_d = h_ab - h_cd  # Elevación (y) del apoyo D respecto al apoyo A
     
     # Dibujar marco dinámico
@@ -452,7 +446,12 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         
     if st.button("Resolver Ejercicio 2"):
         st.write("---")
-        st.markdown("### Paso 1: Factores de Distribución")
+        
+        st.markdown("### Paso 1: Cálculo de Longitud y Altura de CD")
+        st.latex(rf"h_{{CD}} = \text{{base\_d}} \cdot \tan(\theta) = {base_d} \cdot \tan({angulo_d}^\circ) = {h_cd:.4f} \text{{ {u_long}}}")
+        st.latex(rf"L_{{CD}} = \frac{{\text{{base\_d}}}}{{\cos(\theta)}} = \frac{{{base_d}}}{{\cos({angulo_d}^\circ)}} = {L_cd:.4f} \text{{ {u_long}}}")
+
+        st.markdown("### Paso 2: Factores de Distribución")
         k_ab = i_ab / h_ab; k_bc = i_bc / l_bc; k_cd = i_cd / L_cd 
         sum_B = k_ab + k_bc; sum_C = k_bc + k_cd
         fd_ba = k_ab / sum_B; fd_bc = k_bc / sum_B
@@ -462,21 +461,21 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         colfd1.latex(rf"FD_{{BA}} = {fd_ba:.3f}, \quad FD_{{BC}} = {fd_bc:.3f}")
         colfd2.latex(rf"FD_{{CB}} = {fd_cb:.3f}, \quad FD_{{CD}} = {fd_cd:.3f}")
         
-        st.markdown("### Paso 2: Momentos de Empotramiento (Estado 0)")
+        st.markdown("### Paso 3: Momentos de Empotramiento (Estado 0)")
         fem_bc = -(w * l_bc**2)/12; fem_cb = (w * l_bc**2)/12
         fem_ab = 0.0; fem_ba = 0.0; fem_cd = 0.0; fem_dc = 0.0
         FEM_0 = {'AB': fem_ab, 'BA': fem_ba, 'BC': fem_bc, 'CB': fem_cb, 'CD': fem_cd, 'DC': fem_dc}
         st.latex(rf"FEM_{{BC}} = -\frac{{w L^2}}{{12}} = {fem_bc:.2f}, \quad FEM_{{AB}} = 0 \text{{ (Carga en nodo)}}")
         
-        st.markdown("### Paso 3: Análisis de Ladeo (Sway)")
+        st.markdown("### Paso 4: Análisis de Ladeo (Sway)")
         fem_sway_ab = -100.0
         # Relación de momentos por deformación relativa tomando en cuenta h_cd y h_ab variables
         fem_sway_cd = fem_sway_ab * (i_cd / i_ab) * (h_cd * h_ab**2) / (L_cd**3)
         FEM_Sway = {'AB': fem_sway_ab, 'BA': fem_sway_ab, 'BC': 0.0, 'CB': 0.0, 'CD': fem_sway_cd, 'DC': fem_sway_cd}
         
-        st.latex(rf"M'_{{AB}} = {fem_sway_ab:.1f}, \quad M'_{{CD}} = M'_{{AB}} \left(\frac{{I_{{CD}}}}{{I_{{AB}}}}\right) \left(\frac{{h_{{CD}} h_{{AB}}^2}}{{L_{{CD}}^3}}\right) = {fem_sway_cd:.1f}")
+        st.latex(rf"M'_{{AB}} = {fem_sway_ab:.1f}, \quad M'_{{CD}} = M'_{{AB}} \left(\frac{{I_{{CD}}}}{{I_{{AB}}}}\right) \left(\frac{{h_{{CD}} \cdot h_{{AB}}^2}}{{L_{{CD}}^3}}\right) = {fem_sway_cd:.1f}")
 
-        st.markdown("### Paso 4: Tablas de Hardy Cross")
+        st.markdown("### Paso 5: Tablas de Hardy Cross")
         nodos_fd = {'A': {'B': 0}, 'B': {'A': fd_ba, 'C': fd_bc}, 'C': {'B': fd_cb, 'D': fd_cd}, 'D': {'C': 0}}
         barras = [('A','B'), ('B','C'), ('C','D')]
         orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC']
@@ -487,7 +486,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         with st.expander("Ver Tabla Estado 0 (Cargas Reales)", expanded=True): st.dataframe(df_0.round(3))
         with st.expander("Ver Tabla Estado Ladeo"): st.dataframe(df_sway.round(3))
 
-        st.markdown("### Paso 5: Ecuación de Cortante Virtual y Momentos Finales")
+        st.markdown("### Paso 6: Ecuación de Cortante Virtual y Momentos Finales")
         def calc_v_eq(M):
             # La ecuación de trabajo virtual ajustada para alturas asimétricas h_ab y h_cd
             return -((M.get('AB',0) + M.get('BA',0))/h_ab + (M.get('CD',0) + M.get('DC',0)) * h_cd / L_cd**2)
@@ -504,7 +503,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
         st.dataframe(df_final.astype(float).round(4))
 
-        st.markdown("### Paso 6: Reacciones Finales")
+        st.markdown("### Paso 7: Reacciones Finales")
         # Por equilibrio general del marco, asumiendo sumatoria de fuerzas horizontales = 0
         R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / h_ab
         R_Dx = -P - R_Ax 
@@ -519,7 +518,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
             st.latex(rf"M_D = M_{{DC}} = {M_final.get('DC',0):.3f} \text{{ {u_fuerza}-{u_long}}}")
             st.latex(rf"R_{{Dx}} = {R_Dx:.3f} \text{{ {u_fuerza}}}")
 
-        st.markdown("### Paso 7: Diagramas de Cortante y Momento")
+        st.markdown("### Paso 8: Diagramas de Cortante y Momento")
         fig_res2, (ax_v2, ax_m2) = plt.subplots(1, 2, figsize=(14, 5))
         coords = {'A': (0,0), 'B': (0, h_ab), 'C': (l_bc, h_ab), 'D': (l_bc + base_d, y_d)}
         
