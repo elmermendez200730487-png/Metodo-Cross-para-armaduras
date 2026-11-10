@@ -54,8 +54,8 @@ def draw_diagram_member(ax, x1, y1, x2, y2, v1, v2, scale, color='blue', label1=
     ax.plot([x1, px1, px2, x2], [y1, py1, py2, y2], color=color, lw=1.2)
     ax.fill_between([x1, x2], [y1, y2], [py1, py2], color=color, alpha=0.2)
         
-    if abs(v1) > 0.001: ax.text(px1 + 0.3*nx, py1 + 0.3*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
-    if abs(v2) > 0.001: ax.text(px2 + 0.3*nx, py2 + 0.3*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
+    if abs(v1) > 0.001: ax.text(px1 + 0.4*nx, py1 + 0.4*ny, label1, color='black', fontsize=9, weight='bold', ha='center', va='center')
+    if abs(v2) > 0.001: ax.text(px2 + 0.4*nx, py2 + 0.4*ny, label2, color='black', fontsize=9, weight='bold', ha='center', va='center')
 
 def tabla_cross_paso_a_paso(nodos_fd, barras, FEM, iteraciones, orden_miembros, nombre_m_inicial):
     columnas_tuplas = [(m[0], m) for m in orden_miembros]
@@ -304,6 +304,67 @@ if tipo_ejercicio == "Ejercicio 1: Marco Ortogonal Dinámico":
         df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
         st.dataframe(df_final.astype(float).round(4))
 
+        st.markdown("### Paso 6: Reacciones y Diagramas (Ejercicio 1)")
+        R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / H_niveles[0]
+        R_Hx = -(M_final.get('GH',0) + M_final.get('HG',0)) / H_niveles[0]
+        st.latex(rf"R_{{Ax}} = {R_Ax:.3f}, \quad R_{{Hx}} = {R_Hx:.3f}")
+
+        fig_res, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, max(6, num_niveles*3)))
+        coords = {'A':(0,0), 'H':(L_viga, 0)}
+        y_acum = 0
+        for i in range(1, num_niveles + 1):
+            y_acum += H_niveles[i-1]
+            nI, nD = vigas_por_nivel[i]
+            coords[nI] = (0, y_acum); coords[nD] = (L_viga, y_acum)
+            if vol_activos[i]: coords[f"{nD}Vol"] = (L_viga + L_vols[i], y_acum)
+
+        max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
+        scale_m = (L_viga * 0.15) / max_m if max_m > 1e-4 else 1.0
+
+        ax_m.set_title("Momento Flexionante")
+        draw_support(ax_m, coords['A'][0], coords['A'][1]); draw_support(ax_m, coords['H'][0], coords['H'][1])
+        for c in barras_activas:
+            v1, v2 = M_final.get(c[0]+c[1], 0), M_final.get(c[1]+c[0], 0)
+            draw_diagram_member(ax_m, coords[c[0]][0], coords[c[0]][1], coords[c[1]][0], coords[c[1]][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.2f}", label2=f"{v2:.2f}")
+        for i in range(1, num_niveles + 1):
+            if vol_activos[i]:
+                nD = vigas_por_nivel[i][1]
+                v1 = M_final.get(f"{nD}Vol", 0)
+                draw_diagram_member(ax_m, coords[nD][0], coords[nD][1], coords[f"{nD}Vol"][0], coords[f"{nD}Vol"][1], v1, 0, scale_m, color='purple', label1=f"{v1:.2f}")
+
+        ax_v.set_title("Fuerza Cortante")
+        draw_support(ax_v, coords['A'][0], coords['A'][1]); draw_support(ax_v, coords['H'][0], coords['H'][1])
+        V_vals = {}
+        for i in range(1, num_niveles + 1):
+            nI, nD = vigas_por_nivel[i]
+            w_val = cargas_W[i-1]
+            v_izq = w_val*L_viga/2.0 - (M_final.get(nI+nD,0) + M_final.get(nD+nI,0))/L_viga
+            v_der = -w_val*L_viga/2.0 - (M_final.get(nI+nD,0) + M_final.get(nD+nI,0))/L_viga
+            V_vals[nI+nD] = (v_izq, v_der)
+            if vol_activos[i]:
+                P_val = cargas_P[i-1]
+                V_vals[f"{nD}Vol"] = (w_val*L_vols[i] + P_val, P_val)
+        for i in range(1, num_niveles + 1):
+            h = H_niveles[i-1]; c = cols_por_nivel[i]
+            for col in [c[:2], c[2:]]:
+                v_izq = -(M_final.get(col[0],0) + M_final.get(col[1],0))/h
+                V_vals[col[0]] = (v_izq, v_izq)
+
+        max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+        scale_v = (L_viga * 0.15) / max_v if max_v > 1e-4 else 1.0
+
+        for mem, (v_izq, v_der) in V_vals.items():
+            if "Vol" in mem:
+                nD = mem.replace("Vol","")
+                draw_diagram_member(ax_v, coords[nD][0], coords[nD][1], coords[mem][0], coords[mem][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{v_der:.2f}")
+            else:
+                n1, n2 = mem[0], mem[1]
+                draw_diagram_member(ax_v, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{abs(v_der):.2f}")
+
+        for ax in (ax_v, ax_m): ax.set_xticks([]); ax.set_yticks([]); ax.axis('off')
+        st.pyplot(fig_res, clear_figure=True)
+        plt.close(fig_res)
+
 # ==============================================================================
 # EJERCICIO 2: MARCO INCLINADO INTERACTIVO
 # ==============================================================================
@@ -315,7 +376,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         st.subheader("Geometría y Cargas")
         h_ab = st.number_input("Altura Columna AB", value=4.0, on_change=reset_state)
         l_bc = st.number_input("Longitud Viga BC", value=5.0, on_change=reset_state)
-        angulo_d = st.number_input("Ángulo de CD con la horizontal (grados)", value=60.0, min_value=10.0, max_value=89.0, on_change=reset_state)
+        base_d = st.number_input("Distancia horizontal de C a D (base_d)", value=3.0, min_value=0.1, on_change=reset_state)
         w = st.number_input(f"Carga distribuida w en BC ({u_fuerza}/{u_long})", value=12.0, on_change=reset_state)
         P = st.number_input(f"Carga horizontal P en Nodo B ({u_fuerza})", value=20.0, on_change=reset_state)
     with col2:
@@ -324,9 +385,6 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         i_bc = st.number_input("I de BC", value=2.0, on_change=reset_state)
         i_cd = st.number_input("I de CD", value=1.0, on_change=reset_state)
 
-    # Cálculos geométricos dinámicos para visualización
-    theta_rad = math.radians(angulo_d)
-    base_d = h_ab / math.tan(theta_rad)
     L_cd = math.hypot(base_d, h_ab)
     
     # Dibujar marco dinámico
@@ -335,7 +393,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
     ax_ref.plot([0, l_bc], [h_ab, h_ab], 'b-', lw=2) # Viga BC
     ax_ref.plot([l_bc, l_bc + base_d], [h_ab, 0], 'b-', lw=2) # Pata inclinada CD
     
-    # Soportes (Ambos fijos ahora)
+    # Soportes fijos
     draw_support(ax_ref, 0, 0, is_pin=False)
     draw_support(ax_ref, l_bc + base_d, 0, is_pin=False)
     
@@ -349,65 +407,106 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
     ax_ref.text(l_bc/2, h_ab + 0.2, f'I={i_bc}', color='teal', weight='bold')
     ax_ref.text(l_bc + base_d/2 + 0.3, h_ab/2, f'I={i_cd}', color='teal', weight='bold')
     
-    # Dibujar cargas interactivas
+    # Acotación de la variable base_d
+    ax_ref.annotate('', xy=(l_bc, -0.6), xytext=(l_bc + base_d, -0.6), arrowprops=dict(arrowstyle='<->', color='green'))
+    ax_ref.text(l_bc + base_d/2, -1.0, f'base_d = {base_d}', color='green', ha='center', weight='bold')
+    ax_ref.plot([l_bc, l_bc], [h_ab, -0.8], 'k--', lw=1, alpha=0.3)
+    ax_ref.plot([l_bc + base_d, l_bc + base_d], [0, -0.8], 'k--', lw=1, alpha=0.3)
+
     if w > 0:
         draw_distributed_load(ax_ref, 0, l_bc, h_ab, f"w={w}")
     if P != 0:
-        # Carga P ubicada exactamente en el nodo B
         ax_ref.annotate('', xy=(0, h_ab), xytext=(-1.5, h_ab), arrowprops=dict(arrowstyle='->', color='purple', lw=2))
         ax_ref.text(-1.7, h_ab, f'P={P}', color='purple', ha='right', va='center', weight='bold')
     
-    # Dibujar indicador de ángulo en D
-    arc = patches.Arc((l_bc + base_d, 0), h_ab*0.5, h_ab*0.5, angle=0, theta1=180-angulo_d, theta2=180, color='green', lw=2)
-    ax_ref.add_patch(arc)
-    ax_ref.text(l_bc + base_d - h_ab*0.6, 0.3, f"{angulo_d}°", color='green', weight='bold')
-    ax_ref.plot([l_bc - 1, l_bc + base_d + 1], [0, 0], 'k--', lw=1, alpha=0.5) # Línea de referencia
-    
-    ax_ref.set_xlim(-2.5, l_bc + base_d + 2)
-    ax_ref.set_ylim(-1.5, h_ab + 2)
-    ax_ref.axis('off')
-    st.pyplot(fig_ref, clear_figure=True)
-    plt.close(fig_ref)
+    ax_ref.set_xlim(-2.5, l_bc + base_d + 2); ax_ref.set_ylim(-1.5, h_ab + 2); ax_ref.axis('off')
+    st.pyplot(fig_ref, clear_figure=True); plt.close(fig_ref)
         
     if st.button("Resolver Ejercicio 2"):
         st.write("---")
         st.markdown("### Paso 1: Factores de Distribución")
-        # El nodo D es fijo, por lo que k_cd es I/L (ya no 3/4 I/L)
-        k_ab = i_ab / h_ab
-        k_bc = i_bc / l_bc
-        k_cd = i_cd / L_cd 
-        
-        sum_B = k_ab + k_bc
-        sum_C = k_bc + k_cd
-        
+        k_ab = i_ab / h_ab; k_bc = i_bc / l_bc; k_cd = i_cd / L_cd 
+        sum_B = k_ab + k_bc; sum_C = k_bc + k_cd
         fd_ba = k_ab / sum_B; fd_bc = k_bc / sum_B
         fd_cb = k_bc / sum_C; fd_cd = k_cd / sum_C
         
         colfd1, colfd2 = st.columns(2)
-        colfd1.latex(rf"FD_{{BA}} = \frac{{{k_ab:.3f}}}{{{sum_B:.3f}}} = {fd_ba:.3f}, \quad FD_{{BC}} = {fd_bc:.3f}")
-        colfd2.latex(rf"FD_{{CB}} = \frac{{{k_bc:.3f}}}{{{sum_C:.3f}}} = {fd_cb:.3f}, \quad FD_{{CD}} = {fd_cd:.3f} \text{{ (Fijo en D)}}")
+        colfd1.latex(rf"FD_{{BA}} = {fd_ba:.3f}, \quad FD_{{BC}} = {fd_bc:.3f}")
+        colfd2.latex(rf"FD_{{CB}} = {fd_cb:.3f}, \quad FD_{{CD}} = {fd_cd:.3f}")
         
         st.markdown("### Paso 2: Momentos de Empotramiento (Estado 0)")
-        st.write("Como la carga horizontal $P$ está aplicada **directamente en el nodo B**, no genera momentos de empotramiento en la columna AB, sino que entra directamente como fuerza externa en la ecuación de ladeo.")
-        
-        fem_bc = -(w * l_bc**2)/12
-        fem_cb = (w * l_bc**2)/12
-        fem_ab = 0.0
-        fem_ba = 0.0
-        st.latex(rf"FEM_{{BC}} = -\frac{{w L^2}}{{12}} = {fem_bc:.2f}, \quad FEM_{{AB}} = {fem_ab:.2f} \text{{ (Carga en nodo)}}")
+        fem_bc = -(w * l_bc**2)/12; fem_cb = (w * l_bc**2)/12
+        fem_ab = 0.0; fem_ba = 0.0; fem_cd = 0.0; fem_dc = 0.0
+        FEM_0 = {'AB': fem_ab, 'BA': fem_ba, 'BC': fem_bc, 'CB': fem_cb, 'CD': fem_cd, 'DC': fem_dc}
+        st.latex(rf"FEM_{{BC}} = -\frac{{w L^2}}{{12}} = {fem_bc:.2f}, \quad FEM_{{AB}} = 0 \text{{ (Carga en nodo)}}")
         
         st.markdown("### Paso 3: Análisis de Ladeo (Sway)")
-        st.write("Al inducir un desplazamiento $\Delta_{AB}$ en el marco inclinado, la relación geométrica genera un desplazamiento perpendicular en la pata CD.")
         delta_ab = 1.0
-        # Relación de desplazamientos ortogonales para mantener la longitud de la viga BC
-        delta_cd = delta_ab * (L_cd / base_d) 
-        
-        # Al ser soportes fijos, M' = 6EI*Delta / L^2 (la relación proporcional asume 6E=1 para ambos)
+        delta_cd = delta_ab * (h_ab / base_d) 
         fem_sway_ab = -100.0
-        # Proporcionalidad del momento de ladeo
         fem_sway_cd = fem_sway_ab * (i_cd / i_ab) * (h_ab / L_cd)**2 * (delta_cd / delta_ab)
+        FEM_Sway = {'AB': fem_sway_ab, 'BA': fem_sway_ab, 'BC': 0.0, 'CB': 0.0, 'CD': fem_sway_cd, 'DC': fem_sway_cd}
         
-        st.latex(rf"\Delta_{{CD}} = \Delta_{{AB}} \frac{{L_{{CD}}}}{{base_D}} = {delta_cd:.3f} \Delta_{{AB}}")
-        st.latex(rf"M'_{{AB}} = M'_{{BA}} = {fem_sway_ab:.1f}")
-        st.latex(rf"M'_{{CD}} = M'_{{DC}} = {fem_sway_cd:.1f}")
-        st.info("Para finalizar el ladeo se construyen las tablas de Cross y se equilibran los cortantes igual que en el Ejercicio 1 (X iterativo), sumando la fuerza nodal P en la ecuación general de cortante de la base.")
+        st.latex(rf"M'_{{AB}} = {fem_sway_ab:.1f}, \quad M'_{{CD}} = M'_{{AB}} \left(\frac{{I_{{CD}}}}{{I_{{AB}}}}\right) \left(\frac{{h_{{AB}}^3}}{{L_{{CD}}^3}}\right) = {fem_sway_cd:.1f}")
+
+        st.markdown("### Paso 4: Tablas de Hardy Cross")
+        nodos_fd = {'A': {'B': 0}, 'B': {'A': fd_ba, 'C': fd_bc}, 'C': {'B': fd_cb, 'D': fd_cd}, 'D': {'C': 0}}
+        barras = [('A','B'), ('B','C'), ('C','D')]
+        orden_miembros = ['AB', 'BA', 'BC', 'CB', 'CD', 'DC']
+        
+        df_0, M0 = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_0, 10, orden_miembros, "M. INICIAL")
+        df_sway, Msway = tabla_cross_paso_a_paso(nodos_fd, barras, FEM_Sway, 10, orden_miembros, "M. LADEO")
+        
+        with st.expander("Ver Tabla Estado 0 (Cargas Reales)", expanded=True): st.dataframe(df_0.round(3))
+        with st.expander("Ver Tabla Estado Ladeo"): st.dataframe(df_sway.round(3))
+
+        st.markdown("### Paso 5: Ecuación de Cortante Virtual y Momentos Finales")
+        def calc_v_eq(M):
+            return -((M.get('AB',0) + M.get('BA',0))/h_ab + (M.get('CD',0) + M.get('DC',0)) * h_ab / L_cd**2)
+
+        v_eq_0 = calc_v_eq(M0)
+        v_eq_sway = calc_v_eq(Msway)
+        X = (P - v_eq_0) / v_eq_sway
+        
+        st.latex(rf"\Sigma F_x \text{{ (Virtual)}} \Rightarrow P = V_{{eq,0}} + X \cdot V_{{eq,sway}}")
+        st.latex(rf"X = \frac{{{P} - ({v_eq_0:.3f})}}{{{v_eq_sway:.3f}}} = {X:.4f}")
+        
+        M_final = {k: M0.get(k,0) + X * Msway.get(k,0) for k in orden_miembros}
+        df_final = pd.DataFrame([M_final], index=['Momento Final'])
+        df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
+        st.dataframe(df_final.astype(float).round(4))
+
+        st.markdown("### Paso 6: Reacciones y Diagramas (Ejercicio 2)")
+        fig_res2, (ax_v2, ax_m2) = plt.subplots(1, 2, figsize=(14, 5))
+        coords = {'A': (0,0), 'B': (0, h_ab), 'C': (l_bc, h_ab), 'D': (l_bc + base_d, 0)}
+        
+        max_m = max([abs(v) for v in M_final.values() if not np.isnan(v)], default=0.0)
+        scale_m = (l_bc * 0.15) / max_m if max_m > 1e-4 else 1.0
+
+        # Diagrama de Momento
+        ax_m2.set_title("Momento Flexionante")
+        draw_support(ax_m2, coords['A'][0], coords['A'][1]); draw_support(ax_m2, coords['D'][0], coords['D'][1])
+        for n1, n2 in barras:
+            v1, v2 = M_final.get(n1+n2, 0), M_final.get(n2+n1, 0)
+            draw_diagram_member(ax_m2, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v1, -v2, scale_m, color='purple', label1=f"{v1:.2f}", label2=f"{v2:.2f}")
+
+        # Diagrama de Cortante
+        ax_v2.set_title("Fuerza Cortante")
+        draw_support(ax_v2, coords['A'][0], coords['A'][1]); draw_support(ax_v2, coords['D'][0], coords['D'][1])
+        
+        V_vals = {}
+        # AB y CD (constante a lo largo de su eje local)
+        V_vals['AB'] = (-(M_final['AB'] + M_final['BA'])/h_ab, -(M_final['AB'] + M_final['BA'])/h_ab)
+        V_vals['CD'] = (-(M_final['CD'] + M_final['DC'])/L_cd, -(M_final['CD'] + M_final['DC'])/L_cd)
+        # BC (tiene carga distribuida w)
+        V_vals['BC'] = (w*l_bc/2.0 - (M_final['BC'] + M_final['CB'])/l_bc, -w*l_bc/2.0 - (M_final['BC'] + M_final['CB'])/l_bc)
+
+        max_v = max([abs(v[0]) for v in V_vals.values()] + [abs(v[1]) for v in V_vals.values()], default=0.0)
+        scale_v = (l_bc * 0.15) / max_v if max_v > 1e-4 else 1.0
+
+        for mem, (v_izq, v_der) in V_vals.items():
+            n1, n2 = mem[0], mem[1]
+            draw_diagram_member(ax_v2, coords[n1][0], coords[n1][1], coords[n2][0], coords[n2][1], v_izq, v_der, scale_v, color='green', label1=f"{v_izq:.2f}", label2=f"{v_der:.2f}")
+
+        for ax in (ax_v2, ax_m2): ax.set_xlim(-2, l_bc + base_d + 2); ax.set_ylim(-1, h_ab + 2); ax.set_xticks([]); ax.set_yticks([]); ax.axis('off')
+        st.pyplot(fig_res2, clear_figure=True); plt.close(fig_res2)
