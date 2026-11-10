@@ -304,11 +304,21 @@ if tipo_ejercicio == "Ejercicio 1: Marco Ortogonal Dinámico":
         df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
         st.dataframe(df_final.astype(float).round(4))
 
-        st.markdown("### Paso 6: Reacciones y Diagramas (Ejercicio 1)")
+        st.markdown("### Paso 6: Reacciones Finales")
         R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / H_niveles[0]
         R_Hx = -(M_final.get('GH',0) + M_final.get('HG',0)) / H_niveles[0]
-        st.latex(rf"R_{{Ax}} = {R_Ax:.3f}, \quad R_{{Hx}} = {R_Hx:.3f}")
+        
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            st.markdown("**En el Apoyo A (Izquierda):**")
+            st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.3f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Ax}} = {R_Ax:.3f} \text{{ {u_fuerza}}}")
+        with col_r2:
+            st.markdown("**En el Apoyo H (Derecha):**")
+            st.latex(rf"M_H = M_{{HG}} = {M_final.get('HG',0):.3f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Hx}} = {R_Hx:.3f} \text{{ {u_fuerza}}}")
 
+        st.markdown("### Paso 7: Diagramas de Cortante y Momento")
         fig_res, (ax_v, ax_m) = plt.subplots(1, 2, figsize=(16, max(6, num_niveles*3)))
         coords = {'A':(0,0), 'H':(L_viga, 0)}
         y_acum = 0
@@ -376,7 +386,7 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         st.subheader("Geometría y Cargas")
         h_ab = st.number_input("Altura Columna AB", value=4.0, on_change=reset_state)
         l_bc = st.number_input("Longitud Viga BC", value=5.0, on_change=reset_state)
-        base_d = st.number_input("Distancia horizontal de C a D (base_d)", value=3.0, min_value=0.1, on_change=reset_state)
+        angulo_d = st.number_input("Ángulo de inclinación CD (grados)", value=55.0, min_value=10.0, max_value=85.0, on_change=reset_state)
         w = st.number_input(f"Carga distribuida w en BC ({u_fuerza}/{u_long})", value=12.0, on_change=reset_state)
         P = st.number_input(f"Carga horizontal P en Nodo B ({u_fuerza})", value=20.0, on_change=reset_state)
     with col2:
@@ -385,6 +395,9 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         i_bc = st.number_input("I de BC", value=2.0, on_change=reset_state)
         i_cd = st.number_input("I de CD", value=1.0, on_change=reset_state)
 
+    # Cálculos derivados del ángulo dinámico
+    theta_rad = math.radians(angulo_d)
+    base_d = h_ab / math.tan(theta_rad)
     L_cd = math.hypot(base_d, h_ab)
     
     # Dibujar marco dinámico
@@ -407,11 +420,16 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
     ax_ref.text(l_bc/2, h_ab + 0.2, f'I={i_bc}', color='teal', weight='bold')
     ax_ref.text(l_bc + base_d/2 + 0.3, h_ab/2, f'I={i_cd}', color='teal', weight='bold')
     
-    # Acotación de la variable base_d
+    # Acotación y Ángulo visual dinámico
     ax_ref.annotate('', xy=(l_bc, -0.6), xytext=(l_bc + base_d, -0.6), arrowprops=dict(arrowstyle='<->', color='green'))
-    ax_ref.text(l_bc + base_d/2, -1.0, f'base_d = {base_d}', color='green', ha='center', weight='bold')
+    ax_ref.text(l_bc + base_d/2, -1.0, f'L base = {base_d:.2f}', color='green', ha='center', weight='bold')
     ax_ref.plot([l_bc, l_bc], [h_ab, -0.8], 'k--', lw=1, alpha=0.3)
     ax_ref.plot([l_bc + base_d, l_bc + base_d], [0, -0.8], 'k--', lw=1, alpha=0.3)
+    
+    # Dibujar el arco del ángulo
+    arc = patches.Arc((l_bc + base_d, 0), h_ab*0.5, h_ab*0.5, angle=0, theta1=180-angulo_d, theta2=180, color='green', lw=2)
+    ax_ref.add_patch(arc)
+    ax_ref.text(l_bc + base_d - h_ab*0.35, 0.2, f"{angulo_d}°", color='green', weight='bold')
 
     if w > 0:
         draw_distributed_load(ax_ref, 0, l_bc, h_ab, f"w={w}")
@@ -476,7 +494,22 @@ elif tipo_ejercicio == "Ejercicio 2: Marco Inclinado":
         df_final.columns = pd.MultiIndex.from_tuples([(m[0], m) for m in orden_miembros], names=['NODO', 'MIEMBRO'])
         st.dataframe(df_final.astype(float).round(4))
 
-        st.markdown("### Paso 6: Reacciones y Diagramas (Ejercicio 2)")
+        st.markdown("### Paso 6: Reacciones Finales")
+        # Por equilibrio general del marco, asumiendo sumatoria de fuerzas horizontales = 0
+        R_Ax = -(M_final.get('AB',0) + M_final.get('BA',0)) / h_ab
+        R_Dx = -P - R_Ax 
+        
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            st.markdown("**En el Apoyo A (Izquierda):**")
+            st.latex(rf"M_A = M_{{AB}} = {M_final.get('AB',0):.3f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Ax}} = {R_Ax:.3f} \text{{ {u_fuerza}}}")
+        with col_r2:
+            st.markdown("**En el Apoyo D (Derecha):**")
+            st.latex(rf"M_D = M_{{DC}} = {M_final.get('DC',0):.3f} \text{{ {u_fuerza}-{u_long}}}")
+            st.latex(rf"R_{{Dx}} = {R_Dx:.3f} \text{{ {u_fuerza}}}")
+
+        st.markdown("### Paso 7: Diagramas de Cortante y Momento")
         fig_res2, (ax_v2, ax_m2) = plt.subplots(1, 2, figsize=(14, 5))
         coords = {'A': (0,0), 'B': (0, h_ab), 'C': (l_bc, h_ab), 'D': (l_bc + base_d, 0)}
         
